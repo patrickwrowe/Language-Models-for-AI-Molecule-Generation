@@ -33,7 +33,3 @@ class ChemblDB:
         text = '[EOM]'.join([col for col in db_column])
         return text
 
-    def _tokenize(self, filepath: str, vocab_size: int = 1024):
-        self.tokenizer = train_bpe_tokenizer([filepath], vocab_size)
-        return self.tokenizer
-
