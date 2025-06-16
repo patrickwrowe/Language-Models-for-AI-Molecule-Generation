@@ -8,7 +8,8 @@ from tokenizers.pre_tokenizers import Punctuation
 from io import StringIO
 from typing import Optional
 
-from chembed_tokenize import train_bpe_tokenizer
+# ToDo: Centralize
+END_OF_MOLECULE_TOKEN = '[EOM]'
 
 @attr.define
 class ChemblDB:
@@ -30,6 +31,6 @@ class ChemblDB:
 
     def _preprocess(self, chemrepsdb: pd.DataFrame, column: str = "canonical_smiles"):
         db_column = chemrepsdb[column].to_list()
-        text = '[EOM]'.join([col for col in db_column])
+        text = END_OF_MOLECULE_TOKEN.join([col for col in db_column])
         return text
 

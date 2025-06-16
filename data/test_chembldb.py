@@ -1,10 +1,14 @@
 from chembldb import ChemblDB
 from chembed_tokenize import train_bpe_tokenizer
 import pytest
+from tokenizers.models import BPE
+from tokenizers import Tokenizer
+
+TEST_CHEMBLDB_NROWS = 25
 
 @pytest.fixture(scope='session')
 def chembldb_small():
-    return ChemblDB()._load_or_download(nrows=25)
+    return ChemblDB()._load_or_download(nrows=TEST_CHEMBLDB_NROWS)
 
 @pytest.fixture(scope='session')
 def chembldb_small_preprocessed(tmp_path_factory, chembldb_small):
@@ -34,13 +38,14 @@ def smiles_strings():
     ]
 
 def test_chembldb_load(chembldb_small):
-    assert len(chembldb_small) == 25
+    assert len(chembldb_small) == TEST_CHEMBLDB_NROWS
 
 def test_chembldb_preprocess(chembldb_small_preprocessed):
 
     txt, filename = chembldb_small_preprocessed
 
-    assert len(chembldb_small_preprocessed) > 1
+    # When split on EOM token, should get nrows back.
+    assert len(txt.split("[EOM]")) == TEST_CHEMBLDB_NROWS
 
 def test_train_tokenizer(chembldb_small_preprocessed, tmp_path):   
 
@@ -55,3 +60,8 @@ def test_train_tokenizer(chembldb_small_preprocessed, tmp_path):
 def test_encode_molecule(chembl_bpe_tokenizer, smiles_strings):
     encoded = chembl_bpe_tokenizer.encode(smiles_strings[0])
     print(f"Encoded Molecule: {encoded}")
+
+def test_load_tokenizer(smiles_strings):
+    tokenizer = Tokenizer.from_file("./tokenizers/tokenizer-chembldb-16-06-2025.json")
+    encoded = tokenizer.encode(smiles_strings[0])
+    assert encoded
