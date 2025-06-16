@@ -6,11 +6,15 @@ from tokenizers.models import BPE
 from tokenizers.trainers import BpeTrainer
 from tokenizers.pre_tokenizers import Punctuation
 from io import StringIO
+from typing import Optional
+
+from chembed_tokenize import train_bpe_tokenizer
 
 @attr.define
 class ChemblDB:
 
     chemreps_filepath: pathlib.Path = pathlib.Path("../raw-data/chembldb/chembl_35_chemreps.txt.gz")
+    tokenizer: Optional[Tokenizer] = None
 
     def _load_or_download(self, **kwargs):
         """TBD: Download file from source instead of needing to pre-download"""
@@ -24,24 +28,12 @@ class ChemblDB:
             )
             return chembldb_chemreps_raw_pd
 
-    def _preprocess(self, chemrepsdb, column: str = "canonical_smiles"):
+    def _preprocess(self, chemrepsdb: pd.DataFrame, column: str = "canonical_smiles"):
         db_column = chemrepsdb[column].to_list()
         text = '[EOM]'.join([col for col in db_column])
         return text
 
-    def _tokenize(self, filepath, vocab_size=1024):
-        tokenizer = Tokenizer(BPE(unk_token='[UNK]'))
-        trainer = BpeTrainer(special_tokens=['[UNK]', '[EOM]'], vocab_size=vocab_size)
+    def _tokenize(self, filepath: str, vocab_size: int = 1024):
+        self.tokenizer = train_bpe_tokenizer([filepath], vocab_size)
+        return self.tokenizer
 
-        # Do we need more special tokens?
-        # special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"]
-
-        # Include pre-tokenizer for punctuation
-        tokenizer.pre_tokenizer = Punctuation()
-
-        tokenizer.train(
-            [filepath],
-            trainer,
-        )
-
-        return tokenizer

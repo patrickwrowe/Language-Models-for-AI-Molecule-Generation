@@ -21,6 +21,8 @@ def test_tokenize(chembldb_small_preprocessed, tmp_path):
     with open(tmp_path / tmp_txt_fn, 'w') as f:
         f.write(chembldb_small_preprocessed)
 
-    tokens = ChemblDB()._tokenize(str(tmp_path / tmp_txt_fn))
-    assert tokens
+    tokenizer = ChemblDB()._tokenize(str(tmp_path / tmp_txt_fn))
+    assert tokenizer
 
+def test_encode_molecule():
+    pass
