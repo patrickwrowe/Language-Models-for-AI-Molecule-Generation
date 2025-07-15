@@ -1,12 +1,6 @@
 import pandas as pd
 import pathlib
 import attr
-from tokenizers import Tokenizer
-from tokenizers.models import BPE
-from tokenizers.trainers import BpeTrainer
-from tokenizers.pre_tokenizers import Punctuation
-from io import StringIO
-from typing import Optional
 
 # ToDo: Centralize
 END_OF_MOLECULE_TOKEN = '[EOM]'
@@ -15,7 +9,6 @@ END_OF_MOLECULE_TOKEN = '[EOM]'
 class ChemblDB:
 
     chemreps_filepath: pathlib.Path = pathlib.Path("../raw-data/chembldb/chembl_35_chemreps.txt.gz")
-    tokenizer: Optional[Tokenizer] = None
 
     def _load_or_download(self, **kwargs):
         """TBD: Download file from source instead of needing to pre-download"""
