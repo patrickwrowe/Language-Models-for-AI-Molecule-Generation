@@ -7,6 +7,22 @@ END_OF_MOLECULE_TOKEN = '[EOM]'
 
 @attr.define
 class ChemblDB:
+    """
+    A class for handling ChEMBL database chemical representations.
+
+    Attributes:
+        chemreps_filepath (pathlib.Path): Path to the ChEMBL chemical representations file.
+
+    Methods:
+        _load_or_download(**kwargs):
+            Loads the chemical representations file into a pandas DataFrame.
+            Raises FileNotFoundError if the file does not exist.
+            Note: Download functionality is to be implemented.
+
+        _preprocess(chemrepsdb: pd.DataFrame, column: str = "canonical_smiles"):
+            Preprocesses the chemical representations DataFrame by extracting the specified column,
+            joining its entries with END_OF_MOLECULE_TOKEN, and returning the resulting text.
+    """
 
     chemreps_filepath: pathlib.Path = pathlib.Path("../raw-data/chembldb/chembl_35_chemreps.txt.gz")
 
