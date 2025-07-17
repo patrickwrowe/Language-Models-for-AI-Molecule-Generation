@@ -25,7 +25,7 @@ class SMILESDataset(Dataset):
     tokenizer: PreTrainedTokenizerFast
 
     # Max length of any individual SMILES id
-    max_length: int = 128
+    max_length: int = 32
 
     # Batching and splitting
     batch_size: int = 64
