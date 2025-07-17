@@ -28,7 +28,7 @@ class SMILESDataset(Dataset):
     max_length: int = 32
 
     # Batching and splitting
-    batch_size: int = 64
+    batch_size: int = 128
 
 
     def __len__(self):
@@ -49,7 +49,7 @@ class SMILESDataset(Dataset):
             smiles,
             truncation = True,
             max_length = self.max_length,
-            padding = "max_length",
+            padding = False,
         )
         
         return encoding
