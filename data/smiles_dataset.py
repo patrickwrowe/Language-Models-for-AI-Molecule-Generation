@@ -5,6 +5,17 @@ import attr
 
 @attr.define
 class SMILESDataset(Dataset):
+    """
+    A PyTorch Dataset for tokenizing and encoding SMILES strings using a HuggingFace tokenizer.
+    Attributes:
+        smiles_list (list[str]): List of SMILES strings representing molecules.
+        tokenizer (PreTrainedTokenizerFast): HuggingFace tokenizer for SMILES strings.
+        max_length (int): Maximum length for tokenized SMILES sequences (default: 2048).
+    Methods:
+        __len__(): Returns the number of SMILES strings in the dataset.
+        __getitem__(idx): Tokenizes and encodes the SMILES string at the given index, returning a dictionary
+            containing input tensors for model training, including 'input_ids', 'attention_mask', and 'labels'.
+    """
 
     # A list of smiles strings, e.g. ["CO", "CCC(C=O)"]
     smiles_list: list[str]
@@ -21,21 +32,30 @@ class SMILESDataset(Dataset):
     def __getitem__(self, idx):
         smiles = self.smiles_list[idx]
 
-        encoding = self.tokenizer(
+        # Seems super inefficient to encode each item one-by-one...
+        # But I also don't want to store everything in memory.
+        encoding = self.tokenizer.encode(
             smiles,
             truncation = True,
             max_length = self.max_length,
             padding = "max_length",
-            return_tensors = 'pt'
         )
         
-        if not encoding or "input_ids" not in encoding:
-            raise ValueError(f"Failed to encode: {smiles}")
+        print(encoding)
 
-        item = {key: val.squeeze(0) for key, val in encoding.items()}
-        item["labels"] = item["input_ids"].clone()
+        input_ids = torch.tensor(encoding, dtype=torch.long)
 
-        return item
+        print(input_ids)
+        print(self.tokenizer.vocab_size)
 
+        one_hot = torch.nn.functional.one_hot(
+            input_ids, 
+            num_classes=len(self.tokenizer)
+        )
+
+
+
+        return one_hot
+    
 
 
