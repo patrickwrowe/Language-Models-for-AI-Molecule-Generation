@@ -88,7 +88,7 @@ class Trainer:
         # main training loop over batches in train_dataloader
         for self.train_batch_idx, batch in enumerate(self.train_dataloader):
             print(f"Training batch {self.train_batch_idx + 1}/{self.num_train_batches}..."
-                  f" (Epoch {self.epoch + 1}/{self.max_epochs})")
+                  f" (Epoch {self.epoch + 1}/{self.max_epochs})", end="\r")
 
             # must manually move batch from main memory to GPU if we have access to a GPU
             batch = self.maybe_batch_to_gpu(batch)
