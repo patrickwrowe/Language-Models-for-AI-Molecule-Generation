@@ -17,12 +17,12 @@ class simpleRNN(nn.Module):
         self.rnn = nn.RNN(self.vocab_size, self.num_hiddens)
 
     def forward(self, inputs, state=None):
-        output, hidden = self.rnn(inputs, state)
-        return self.linear(output)
+        output, _ = self.rnn(inputs, state)
+        return self.linear(output).swapaxes(0, 1)
 
     def loss(self, y_hat, y):
-        loss_function = nn.MSELoss()
-        return loss_function(y_hat, y)
+        loss_function = nn.CrossEntropyLoss()
+        return loss_function(y_hat, y.type(torch.long))
 
     def initialize_parameters(self, module):
 
@@ -37,11 +37,13 @@ class simpleRNN(nn.Module):
         return optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
 
     def training_step(self, batch):
-        y_hat = self(*batch[:-1])
-        l = self.loss(y_hat, batch[-1])
+        # target is the last element in the batch
+        inputs, targets = batch[:-1], batch[-1]
+        l = self.loss(self(inputs), targets)
         return l
 
-    def validation_step(self, batch):
-        y_hat = self(*batch[:-1])
-        l = self.loss(y_hat, batch[-1])
+    def validation_step(self, batch): 
+        # target is the last element in the batch
+        inputs, targets = batch[:-1], batch[-1]
+        l = self.loss(self(inputs), targets)
         return l
