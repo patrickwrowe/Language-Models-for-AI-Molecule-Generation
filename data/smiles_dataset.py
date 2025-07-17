@@ -36,7 +36,13 @@ class SMILESDataset(Dataset):
 
     def __getitem__(self, idx: int):
         smiles = self.smiles_list[idx]
+        return self.encode_smiles_to_one_hot(smiles)
+    
 
+    def encode_smiles_to_one_hot(self, smiles):
+        return self.encoding_to_one_hot(self.encode_smiles(smiles))
+
+    def encode_smiles(self, smiles):
         # Seems super inefficient to encode each item one-by-one...
         # But I also don't want to store everything in memory.
         encoding = self.tokenizer.encode(
@@ -46,15 +52,18 @@ class SMILESDataset(Dataset):
             padding = "max_length",
         )
         
+        return encoding
+    
+    def encoding_to_one_hot(self, encoding):
         input_ids = torch.tensor(encoding, dtype=torch.long)
 
         one_hot = torch.nn.functional.one_hot(
             input_ids, 
             num_classes=len(self.tokenizer)
-        )
+        ).type(torch.float32)
 
         return one_hot
-    
+     
     def get_dataloader(self, train: bool):
         return DataLoader(
             self,
