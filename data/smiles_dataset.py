@@ -41,12 +41,7 @@ class SMILESDataset(Dataset):
             padding = "max_length",
         )
         
-        print(encoding)
-
         input_ids = torch.tensor(encoding, dtype=torch.long)
-
-        print(input_ids)
-        print(self.tokenizer.vocab_size)
 
         one_hot = torch.nn.functional.one_hot(
             input_ids, 
