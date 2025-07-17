@@ -3,6 +3,7 @@ import pytest
 from smiles_dataset import SMILESDataset
 from chembed_tokenize import load_chembed_tokenizer
 from torch.utils.data import DataLoader
+import torch
 
 @pytest.fixture(scope="session")
 def smiles_strings():
@@ -41,6 +42,18 @@ def test_create_dataloader(smiles_strings):
         tokenizer
     )
 
+    one_encoded = dataset[0]
+
+    # should return a pytorch tensor
+    assert type(one_encoded) == torch.Tensor, f"Expected {torch.Tensor} got {type(one_encoded)}"
+
+    # Check one-hot has len(seq) x len(tokens) dims
+    assert one_encoded.dim() == 2 
+
+    # check elements are one-hot
+    assert torch.all((one_encoded == 0) | (one_encoded == 1))
+
+    # Check that we can load it into a dataloader
     dataloader = DataLoader(
         dataset,
         batch_size = 8,
@@ -49,7 +62,6 @@ def test_create_dataloader(smiles_strings):
 
     batch = next(iter(dataloader))
 
-    print(batch.keys())
-    
+    assert batch.dim() == 3
 
-
+    assert list(batch.shape) == [8, dataset.max_length, len(tokenizer)]

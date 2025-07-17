@@ -57,9 +57,8 @@ def test_train_tokenizer(chembldb_small_preprocessed, tmp_path):
 
     assert tokenizer
 
-def test_encode_molecule(chembl_bpe_tokenizer, smiles_strings):
-    encoded = chembl_bpe_tokenizer.encode(smiles_strings[0])
-    print(f"Encoded Molecule: {encoded}")
+def test_encode_molecules(chembl_bpe_tokenizer, smiles_strings):
+    encoded = [chembl_bpe_tokenizer.encode(smiles) for smiles in smiles_strings]
 
 def test_load_tokenizer(smiles_strings):
     tokenizer = Tokenizer.from_file("./tokenizers/tokenizer-chembldb-16-06-2025.json")
