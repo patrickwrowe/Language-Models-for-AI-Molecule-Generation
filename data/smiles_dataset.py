@@ -49,7 +49,7 @@ class SMILESDataset(Dataset):
             smiles,
             truncation = True,
             max_length = self.max_length,
-            padding = False,
+            padding = 'max_length',
         )
         
         return encoding
