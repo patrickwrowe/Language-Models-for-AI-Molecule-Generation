@@ -89,7 +89,7 @@ class Trainer:
         for self.train_batch_idx, batch in enumerate(self.train_dataloader):
             print(f"Training batch {self.train_batch_idx + 1}/{self.num_train_batches}..."
                   f" (Epoch {self.epoch + 1}/{self.max_epochs})")
-                  
+
             # must manually move batch from main memory to GPU if we have access to a GPU
             batch = self.maybe_batch_to_gpu(batch)
 
@@ -138,6 +138,16 @@ class Trainer:
             }
         )
 
+        self.print_training_status()
+
+
+    def print_training_status(self):
+        train_loss = self.metadata["training_epochs"][-1]["avg_train_loss"]
+        val_loss = self.metadata["training_epochs"][-1]["avg_val_loss"] 
+        val_loss = val_loss if val_loss is not None else np.NaN
+
+        end = "\n" if self.epoch == self.max_epochs -1 else "\r"  # Carriage return unless last epoch
+        print(f"Epoch {self.epoch + 1}/{self.max_epochs}: Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}", end=end)
 
 
 
