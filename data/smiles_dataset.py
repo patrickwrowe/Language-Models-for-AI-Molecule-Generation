@@ -116,7 +116,7 @@ class SMILESDatasetContinuous(Dataset):
         # self.encoded_smiles = self.encode_smiles_to_one_hot(self.all_smiles)
 
     def __len__(self):
-        return int(len(self.encoded_smiles) / self.length)
+        return int(len(self.all_smiles) / (self.length * 3))
 
     def __getitem__(self, idx: int) :
         start = idx * (self.length * 3) # Lets say 3 is the length of most tokens
@@ -136,7 +136,6 @@ class SMILESDatasetContinuous(Dataset):
             truncation=True,
             max_length=self.length,
             padding='max_length',
-            return_tensors='pt'  # Return as a PyTorch tensor
         )
         
         return encoding
