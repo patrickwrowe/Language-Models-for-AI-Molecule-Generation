@@ -12,6 +12,7 @@ class Trainer:
     # training options
     max_epochs: int
     init_random: Optional[int] = None
+    clip_grads_norm: Optional[float] = None
 
     # model params
     model: Module = attrs.field(init=False)
@@ -87,8 +88,10 @@ class Trainer:
 
         # main training loop over batches in train_dataloader
         for self.train_batch_idx, batch in enumerate(self.train_dataloader):
+
+            end = "\r" if self.train_batch_idx < self.num_train_batches else "\n"
             print(f"Training batch {self.train_batch_idx + 1}/{self.num_train_batches}..."
-                  f" (Epoch {self.epoch + 1}/{self.max_epochs})", end="\r")
+                  f" (Epoch {self.epoch + 1}/{self.max_epochs})", end=end)
 
             # must manually move batch from main memory to GPU if we have access to a GPU
             batch = self.maybe_batch_to_gpu(batch)
@@ -103,6 +106,9 @@ class Trainer:
             # loss.backward computes the gradients fo rhthe step using analytical gradients
             # and stores these in the pytorch tensor objects for us to use
             loss.backward()
+
+            if self.clip_grads_norm:
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip_grads_norm)
 
             # use the optimizer to move the parameters in the direction of the gradient
             self.optim.step()
@@ -146,10 +152,9 @@ class Trainer:
         val_loss = self.metadata["training_epochs"][-1]["avg_val_loss"] 
         val_loss = val_loss if val_loss is not None else np.NaN
 
-        end = "\n" if self.epoch == self.max_epochs -1 else "\r"  # Carriage return unless last epoch
+        # end = "\n" if self.epoch == self.max_epochs -1 else "\r"  # Carriage return unless last epoch
+        end = "\n"
         print(f"Epoch {self.epoch + 1}/{self.max_epochs}: Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}", end=end)
-
-
 
 
 def try_gpu():
