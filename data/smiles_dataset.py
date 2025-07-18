@@ -119,8 +119,8 @@ class SMILESDatasetContinuous(Dataset):
         return int(len(self.encoded_smiles) / self.length)
 
     def __getitem__(self, idx: int) :
-        start = idx * self.length
-        end = start + self.length
+        start = idx * (self.length * 3) # Lets say 3 is the length of most tokens
+        end = start + (self.length * 3) 
         
         encoded = self.encode_smiles_to_one_hot(self.all_smiles[start:end])
         return encoded
