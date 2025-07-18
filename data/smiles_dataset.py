@@ -123,7 +123,7 @@ class SMILESDatasetContinuous(Dataset):
         end = start + (self.length * 3) 
         
         encoded = self.encode_smiles_to_one_hot(self.all_smiles[start:end])
-        return encoded
+        return encoded[:-1], encoded[-1] 
 
     def encode_smiles_to_one_hot(self, smiles) -> torch.Tensor:
         return self.encoding_to_one_hot(self.encode_smiles(smiles))
