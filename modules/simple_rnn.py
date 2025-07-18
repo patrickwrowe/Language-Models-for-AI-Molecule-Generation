@@ -16,17 +16,17 @@ class simpleRNN(nn.Module):
         super().__init__()
         self.linear = nn.LazyLinear(self.vocab_size)
         self.rnn = nn.RNN(self.vocab_size, self.num_hiddens)
-        self.softmax = nn.Softmax(dim=-1)
         self.initialize_parameters(self)
 
     def forward(self, inputs, state=None):
         output, _ = self.rnn(inputs, state)
         output = self.linear(output)
-        output = self.softmax(output)
         return output
 
     def loss(self, y_hat, y):
-        return nn.CrossEntropyLoss()(y_hat.view(-1, self.vocab_size), y.view(-1))
+        loss_function = nn.CrossEntropyLoss()
+
+        return loss_function(y_hat, y.type(torch.long))
 
     def initialize_parameters(self, module):
 
