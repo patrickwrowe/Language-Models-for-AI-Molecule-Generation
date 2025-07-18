@@ -1,6 +1,7 @@
 import torch
 import attrs
 from torch import nn, optim
+from torch.nn.utils import clip_grad_norm
 
 @attrs.define(eq=False)
 class simpleRNN(nn.Module):
@@ -15,14 +16,17 @@ class simpleRNN(nn.Module):
         super().__init__()
         self.linear = nn.LazyLinear(self.vocab_size)
         self.rnn = nn.RNN(self.vocab_size, self.num_hiddens)
+        self.softmax = nn.Softmax(dim=-1)
+        self.initialize_parameters(self)
 
     def forward(self, inputs, state=None):
         output, _ = self.rnn(inputs, state)
-        return self.linear(output).swapaxes(0, 1)
+        output = self.linear(output)
+        output = self.softmax(output)
+        return output
 
     def loss(self, y_hat, y):
-        loss_function = nn.CrossEntropyLoss()
-        return loss_function(y_hat, y.type(torch.long))
+        return nn.CrossEntropyLoss()(y_hat.view(-1, self.vocab_size), y.view(-1))
 
     def initialize_parameters(self, module):
 
