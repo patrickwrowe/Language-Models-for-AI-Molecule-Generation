@@ -12,7 +12,7 @@ class Trainer:
     # training options
     max_epochs: int
     init_random: Optional[int] = None
-    clip_grads_norm: Optional[float] = None
+    clip_grads_norm: float = 1.0
 
     # model params
     model: Module = attrs.field(init=False)
@@ -101,14 +101,17 @@ class Trainer:
             self.optim.zero_grad()
 
             # the model implements a method which computes the loss on a particular batch
+            # print(len(batch)) # expect 2
+            # print(batch[0].shape)
+            # print(batch[1].shape)
+            # exit()
             loss = self.model.training_step(batch)
             
             # loss.backward computes the gradients fo rhthe step using analytical gradients
             # and stores these in the pytorch tensor objects for us to use
             loss.backward()
 
-            if self.clip_grads_norm:
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip_grads_norm)
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip_grads_norm)
 
             # use the optimizer to move the parameters in the direction of the gradient
             self.optim.step()
