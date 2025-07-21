@@ -41,13 +41,9 @@ class simpleRNN(nn.Module):
         return optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
 
     def training_step(self, batch):
-        # target is the last element in the batch
-        inputs, targets = batch[:-1], batch[-1]
-        l = self.loss(self(inputs), targets)
+        l = self.loss(self(*batch[:-1]), batch[-1])
         return l
 
-    def validation_step(self, batch): 
-        # target is the last element in the batch
-        inputs, targets = batch[:-1], batch[-1]
-        l = self.loss(self(inputs), targets)
+    def validation_step(self, batch):
+        l = self.loss(self(*batch[:-1]), batch[-1])
         return l

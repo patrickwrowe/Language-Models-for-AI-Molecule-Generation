@@ -78,7 +78,7 @@ class Trainer:
             self.fit_epoch()
 
     def maybe_batch_to_gpu(self, batch):
-        batch = batch.to(try_gpu())
+        batch = [b.to(try_gpu()) for b in batch]
         return batch
 
     def fit_epoch(self):
