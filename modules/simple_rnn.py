@@ -15,15 +15,11 @@ class simpleRNN(nn.Module):
     def __attrs_post_init__(self):
         super().__init__()
         self.linear = nn.Linear(self.num_hiddens, self.vocab_size)
-        self.rnn = nn.RNN(self.vocab_size, self.num_hiddens)
-        self.layer_norm = nn.LayerNorm(self.num_hiddens)
+        self.rnn = nn.RNN(self.vocab_size, self.num_hiddens, batch_first=True)
         self.initialize_parameters(self)
 
     def forward(self, inputs, state=None):
-        inputs = inputs.transpose(0, 1)
         output, _ = self.rnn(inputs, state)
-        output = output.transpose(0, 1)  # Transpose back to (batch, seq, features)
-        output = self.layer_norm(output)
         output = self.linear(output)
         return output
 
