@@ -36,8 +36,10 @@ class SMILESDataset(Dataset):
 
     def __getitem__(self, idx: int):
         smiles = self.smiles_list[idx]
-        return self.encode_smiles_to_one_hot(smiles)
-    
+        encoding = self.encode_smiles(smiles)
+        input_one_hot = self.encoding_to_one_hot(encoding[:-1])
+        target_indices = torch.tensor(encoding[1:], dtype=torch.long)
+        return input_one_hot, target_indices
 
     def encode_smiles_to_one_hot(self, smiles):
         return self.encoding_to_one_hot(self.encode_smiles(smiles))
@@ -118,12 +120,13 @@ class SMILESDatasetContinuous(Dataset):
     def __len__(self):
         return int(len(self.all_smiles) / (self.length * 3))
 
-    def __getitem__(self, idx: int) :
-        start = idx * (self.length * 3) # Lets say 3 is the length of most tokens
-        end = start + (self.length * 3) 
-        
-        encoded = self.encode_smiles_to_one_hot(self.all_smiles[start:end])
-        return encoded[:-1], encoded[-1] 
+    def __getitem__(self, idx: int):
+        start = idx * (self.length * 3)
+        end = start + (self.length * 3)
+        encoding = self.encode_smiles(self.all_smiles[start:end])
+        input_one_hot = self.encoding_to_one_hot(encoding[:-1])
+        target_indices = torch.tensor(encoding[1:], dtype=torch.long)
+        return input_one_hot, target_indices
 
     def encode_smiles_to_one_hot(self, smiles) -> torch.Tensor:
         return self.encoding_to_one_hot(self.encode_smiles(smiles))
