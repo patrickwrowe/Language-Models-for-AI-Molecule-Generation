@@ -129,7 +129,7 @@ class Trainer:
             with torch.no_grad():  # Don't want gradients in evaluation mode
                 for self.val_batch_id, batch in enumerate(self.val_dataloader):
                     batch = self.maybe_batch_to_gpu(batch)
-                    val_loss += self.model.validation_step(batch)
+                    val_loss += self.model.validation_step(batch).item()
 
             avg_val_loss = val_loss / self.num_val_batches
         else:

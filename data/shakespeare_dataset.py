@@ -1,5 +1,5 @@
 import attr
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, Subset
 import torch
 
 @attr.define
@@ -53,8 +53,19 @@ class characterLevelShakespeare(Dataset):
         return input_one_hot, target_tensor
 
     def get_dataloader(self, train: bool):
+        # Create proper train/val split
+        total_len = len(self)
+        train_len = int(0.8 * total_len)  # 80% for training
+        
+        if train:
+            # Training uses first 80% of data
+            subset = Subset(self, range(train_len))
+        else:
+            # Validation uses last 20% of data
+            subset = Subset(self, range(train_len, total_len))
+        
         return DataLoader(
-            self,
+            subset,
             batch_size = self.batch_size,
             shuffle = train
         )
