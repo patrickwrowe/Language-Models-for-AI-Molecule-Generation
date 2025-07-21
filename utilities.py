@@ -1,6 +1,8 @@
 
 import torch
 import numpy as np
+from rdkit import Chem
+from rdkit.Chem import Draw
 
 def extract_training_losses(metadata: dict) -> dict:
     """
@@ -120,3 +122,21 @@ def simple_generate(prefix, num_chars, model, dataset, device=None):
             print(f"Step {i+1}: Added '{next_char}' -> '{generated}'")
             
     return generated
+
+def validate_smiles_string(smiles: str):
+    
+    mol = Chem.MolFromSmiles(smiles)
+    
+    if mol is not None: 
+        return True 
+    else: 
+        return False
+
+def draw_molecule(smiles: str):
+    if not validate_smiles_string(smiles):
+        raise RuntimeError("Invalid SMILES string, could not be parsed.")
+    else:
+        mol = Chem.MolFromSmiles(smiles)
+        return Draw.MolToImage(mol)
+
+    
