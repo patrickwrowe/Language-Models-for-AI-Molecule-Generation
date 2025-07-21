@@ -88,3 +88,77 @@ class SMILESDatasetContinuous(Dataset):
 
     def val_dataloader(self):
         return self.get_dataloader(train=False)
+
+
+@attr.define
+class CharacterLevelSMILES(Dataset):
+    """
+    A PyTorch Dataset for character-level tokenization of SMILES strings.
+    Attributes:
+        smiles_list (list[str]): List of SMILES strings representing molecules.
+        tokenizer (PreTrainedTokenizerFast): HuggingFace tokenizer for SMILES strings.
+        max_length (int): Maximum length for tokenized SMILES sequences (default: 2048).
+    """
+
+    smiles_list: list[str]
+
+    # Length and batch size for loading
+    length: int = 64
+    batch_size: int = 128
+
+    # All smiles strings concatenated into one string
+    all_smiles: str = attr.field(init=False)
+    # As above but encoded as indices
+    encoded_smiles: list[int] = attr.field(init=False)
+    
+    char_to_idx: dict[str, int] = attr.field(init=False)
+    idx_to_char: dict[int, str] = attr.field(init=False)
+
+    def __attrs_post_init__(self):
+        self.all_smiles: str = ' '.join(self.smiles_list)
+        self.characters: list[str] = list(set(self.all_smiles))
+
+        self.char_to_idx = {c: inx for inx, c in enumerate(self.characters)}
+        self.idx_to_char = {inx: c for inx, c in enumerate(self.characters)}
+
+        self.encoded_smiles = [self.char_to_idx[c] for c in self.all_smiles]
+
+    def __len__(self):
+        return len(self.all_smiles) // self.length
+
+    def __getitem__(self, idx: int):
+        start = idx * self.length
+        end = start + self.length
+        
+        # Get the character indices for this slice
+        if end >= len(self.encoded_smiles):
+            end = len(self.encoded_smiles)
+        
+        sequence = self.encoded_smiles[start:end]
+        
+        input_seq = sequence[:-1]
+        target_seq = sequence[1:]
+    
+        # Convert to tensors
+        input_tensor = torch.tensor(input_seq, dtype=torch.long)
+        target_tensor = torch.tensor(target_seq, dtype=torch.long)
+        
+        # Convert input to one-hot encoding, but leave the targets as is...
+        input_one_hot = torch.nn.functional.one_hot(input_tensor, num_classes=len(self.characters)).float()
+        
+        return input_one_hot, target_tensor
+
+    def get_dataloader(self, train: bool):
+        return DataLoader(
+            self,
+            batch_size = self.batch_size,
+            shuffle = train
+        )
+
+    def train_dataloader(self):
+        return self.get_dataloader(train=True)
+
+    def val_dataloader(self):
+        return self.get_dataloader(train=False)
+
+    
