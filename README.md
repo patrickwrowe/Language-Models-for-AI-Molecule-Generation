@@ -1,3 +1,3 @@
 # ChEmbed
 
-Using language models to learn with SMILES strings
+Using language models to learn with SMILES strings.
