@@ -31,11 +31,14 @@ class Trainer:
 
     # Metadata
     metadata: dict = {}
+    device: torch.device = attrs.field(init=False)
 
     def prepare_state(self):
         if self.init_random:
             torch.manual_seed(self.init_random)
-            torch.use_deterministic_algorithms(True)
+            
+            # Use of deterministic algorithms not supported at the moment
+            # torch.use_deterministic_algorithms(True)
 
     def prepare_data(self, data):
         """Data must inherit from the DataSet class and have special classes for returning loaders"""
@@ -50,6 +53,7 @@ class Trainer:
         device = try_gpu()
         model.to(device)
         self.model = model
+        self.device = device
 
     def fit(self, model, data):
         self.prepare_state()
