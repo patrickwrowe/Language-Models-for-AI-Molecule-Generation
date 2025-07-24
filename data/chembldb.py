@@ -71,7 +71,7 @@ class ChemblDBIndications:
     query: str = SQL_DRUG_INDICATION_QUERY
 
     def _load_data(self):
-        if not pathlib.Path.exists(CHEMBL_DB_PATH):
+        if not pathlib.Path.exists(pathlib.Path(CHEMBL_DB_PATH)):
             raise FileNotFoundError(f"{CHEMBL_DB_PATH} was not found")
         else:
             con = sqlite3.connect(CHEMBL_DB_PATH)
@@ -81,8 +81,8 @@ class ChemblDBIndications:
             return pd_df
 
     def _preprocess(self, raw_df: pd.DataFrame):
-        raw_df = raw_df[raw_df.max_phase_for_ind >= 3]  # Don't want to train on things which weren't efficacious
-                    .drop(columns=[
+        raw_df = raw_df[raw_df.max_phase_for_ind >= 3].drop(  # Don't want to train on things which weren't efficacious
+                            columns=[
                             'molregno', 
                             'record_id', 
                             'max_phase_for_ind', 
@@ -90,6 +90,8 @@ class ChemblDBIndications:
                         ]  # Don't need identifiers etc
                     )
         
-        pd.get_dummies(pd_db, columns=['mesh_heading']) # One-hot like for disease indications
+        pd.get_dummies(raw_df, columns=['mesh_heading']) # One-hot like for disease indications
+
+        return raw_df
 
         

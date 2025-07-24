@@ -104,6 +104,7 @@ class CharacterLevelSMILES(Dataset):
     # Length and batch size for loading
     length: int = 64
     batch_size: int = 128
+    frac_train: float = 0.8
 
     # All smiles strings concatenated into one string
     all_smiles: str = attr.field(init=False)
@@ -150,13 +151,11 @@ class CharacterLevelSMILES(Dataset):
     def get_dataloader(self, train: bool):
         # Create proper train/val split
         total_len = len(self)
-        train_len = int(0.8 * total_len)  # 80% for training
+        train_len = int(self.frac_train * total_len)  # 80% for training
         
         if train:
-            # Training uses first 80% of data
             subset = Subset(self, range(train_len))
         else:
-            # Validation uses last 20% of data
             subset = Subset(self, range(train_len, total_len))
             
         return DataLoader(
