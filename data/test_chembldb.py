@@ -1,4 +1,4 @@
-from chembldb import ChemblDB
+from chembldb import ChemblDBChemreps
 from chembed_tokenize import train_bpe_tokenizer
 import pytest
 from tokenizers.models import BPE
@@ -8,13 +8,13 @@ TEST_CHEMBLDB_NROWS = 25
 
 @pytest.fixture(scope='session')
 def chembldb_small():
-    return ChemblDB()._load_or_download(nrows=TEST_CHEMBLDB_NROWS)
+    return ChemblDBChemreps()._load_or_download(nrows=TEST_CHEMBLDB_NROWS)
 
 @pytest.fixture(scope='session')
 def chembldb_small_preprocessed(tmp_path_factory, chembldb_small):
     tmp_txt_fn = "temp_chembldb_text.txt"
 
-    preprocessed_text = ChemblDB()._preprocess(chembldb_small, column="canonical_smiles")
+    preprocessed_text = ChemblDBChemreps()._preprocess(chembldb_small, column="canonical_smiles")
     tmp_path = tmp_path_factory.mktemp("txt")
 
     filename = tmp_path / tmp_txt_fn

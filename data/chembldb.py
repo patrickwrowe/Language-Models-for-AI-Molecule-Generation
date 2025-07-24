@@ -6,7 +6,7 @@ import attr
 END_OF_MOLECULE_TOKEN = '[EOM]'
 
 @attr.define
-class ChemblDB:
+class ChemblDBChemreps:
     """
     A class for handling ChEMBL database chemical representations.
 
