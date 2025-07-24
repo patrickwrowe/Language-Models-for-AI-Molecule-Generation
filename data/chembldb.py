@@ -1,6 +1,21 @@
 import pandas as pd
 import pathlib
 import attr
+import sqlite3
+
+
+CHEMBL_DB_PATH = "../raw-data/chembldb/chembl_35/chembl_35_sqlite/chembl_35.db"
+
+SQL_DRUG_INDICATION_QUERY = """
+    SELECT comp.molregno, comp.canonical_smiles, mol.indication_class, rec.record_id, ind.mesh_heading, ind.max_phase_for_ind
+    FROM compound_structures as comp
+    INNER JOIN molecule_dictionary as mol
+    ON comp.molregno = mol.molregno
+    INNER JOIN compound_records as rec
+    on mol.molregno = rec.molregno
+    INNER JOIN drug_indication as ind
+    ON rec.record_id = ind.record_id
+"""
 
 # ToDo: Centralize
 END_OF_MOLECULE_TOKEN = '[EOM]'
@@ -29,7 +44,7 @@ class ChemblDBChemreps:
     def _load_or_download(self, **kwargs):
         """TBD: Download file from source instead of needing to pre-download"""
         if not pathlib.Path.exists(self.chemreps_filepath):
-            raise FileNotFoundError(f"${self.chemreps_filepath} was not found. Please download from https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/latest/")
+            raise FileNotFoundError(f"{self.chemreps_filepath} was not found. Please download from https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/latest/")
         else:
             chembldb_chemreps_raw_pd = pd.read_table(
                 pathlib.Path(self.chemreps_filepath), 
@@ -43,3 +58,38 @@ class ChemblDBChemreps:
         text = END_OF_MOLECULE_TOKEN.join([col for col in db_column])
         return text
 
+
+@attr.define 
+class ChemblDBIndications:
+    """
+    A class for extracting the drug indications, alongside relevant smiles
+    strings from the chembldb database.
+    """
+
+    query_df: pd.DataFrame = attr.field(init=False)
+
+    query: str = SQL_DRUG_INDICATION_QUERY
+
+    def _load_data(self):
+        if not pathlib.Path.exists(CHEMBL_DB_PATH):
+            raise FileNotFoundError(f"{CHEMBL_DB_PATH} was not found")
+        else:
+            con = sqlite3.connect(CHEMBL_DB_PATH)
+            cur = con.cursor()
+            pd_df = pd.read_sql_query(sql=SQL_DRUG_INDICATION_QUERY, con=con)
+            con.close()
+            return pd_df
+
+    def _preprocess(self, raw_df: pd.DataFrame):
+        raw_df = raw_df[raw_df.max_phase_for_ind >= 3]  # Don't want to train on things which weren't efficacious
+                    .drop(columns=[
+                            'molregno', 
+                            'record_id', 
+                            'max_phase_for_ind', 
+                            'indication_class'
+                        ]  # Don't need identifiers etc
+                    )
+        
+        pd.get_dummies(pd_db, columns=['mesh_heading']) # One-hot like for disease indications
+
+        
