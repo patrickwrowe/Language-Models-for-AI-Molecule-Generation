@@ -5,14 +5,41 @@ from torch import nn, optim
 @attrs.define(eq=False)
 class SmilesIndGeneratorRNN(nn.Module):
 
+    vocab_size: int
+    num_indications: int
+    num_hiddens: int
+    num_layers: int
+
     learning_rate: float = 0.1
     weight_decay: float = 0.01
 
     def __attrs_post_init__(self):
         super().__init__()
 
-    def forward(self, seq_tensor: torch.Tensor, ind_tensor: torch.Tensor, state=None):
-        pass
+
+        self.ind_to_state = nn.Linear(
+            in_features=self.num_indications, 
+            out_features=self.num_hiddens
+        )
+
+        self.rnn_to_out = nn.Linear(
+            self.num_hiddens, self.vocab_size
+        )
+
+        self.rnn = nn.RNN(
+            in_features = self.vocab_size,
+            out_features = self.num_hiddens,
+            hidden_size = self.num_layers,
+            batch_first=True
+        )
+
+
+    def forward(self, seq_tensor: torch.Tensor, ind_tensor: torch.Tensor):
+        # First, condition the state
+        state = self.ind_to_state(ind_tensor)
+        output, _ = self.rnn(seq_tensor, state)
+        output = self.linear(output)
+        return output
 
     def loss(self, y_hat, y):
         loss_function = nn.CrossEntropyLoss()
