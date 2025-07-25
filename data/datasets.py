@@ -1,3 +1,78 @@
+from torch.utils.data import Dataset, DataLoader, Subset
+import torch
+import attr
+import pandas as pd
+
+from chembldb import ChemblDBIndications
+
+
+@attr.define
+class CharSMILESChEMBLIndications(Dataset):
+    """
+    Character level SMILES database with disease indications
+    """
+
+    all_data: pd.DataFrame = ChemblDBIndications()._preprocess(ChemblDBIndications()._load_data())
+    
+    # Length and batch size for loading
+    max_length: int = 64
+    batch_size: int = 128
+    frac_train: float = 0.8
+
+    char_to_idx: dict[str, int] = attr.field(init=False)
+    idx_to_char: dict[int, str] = attr.field(init=False)
+
+    def __attrs_post_init__(self):
+        self.all_smiles: list[str] = self.all_data["canonical_smiles"].tolist()
+        self.characters: list[str] = list(set(''.join(self.all_smiles)))
+
+        self.char_to_idx = {c: inx for inx, c in enumerate(self.characters)}
+        self.idx_to_char = {inx: c for inx, c in enumerate(self.characters)}
+
+        self.encoded_smiles = [[self.char_to_idx[c] for c in smiles_string] for smiles_string in self.all_smiles]
+
+        get_tensor = lambda x: torch.tensor(x.values.astype(float), dtype=torch.float32)
+        self.indications_tensor = get_tensor(self.all_data.drop(columns=["canonical_smiles"]))
+
+    def __len__(self):
+        return len(self.all_data)
+
+    def __getitem__(self, idx: int):
+
+        indications = self.indications_tensor[idx, :]
+
+        encoded_smiles = torch.tensor(self.encoded_smiles[idx])
+
+        smiles_one_hot = torch.nn.functional.one_hot(
+            encoded_smiles, 
+            num_classes=len(self.characters)
+            ).float()
+        
+        return smiles_one_hot, indications, encoded_smiles
+
+    def get_dataloader(self, train: bool):
+        # Create proper train/val split
+        total_len = len(self)
+        train_len = int(self.frac_train * total_len)  # 80% for training
+        
+        if train:
+            subset = Subset(self, range(train_len))
+        else:
+            subset = Subset(self, range(train_len, total_len))
+            
+        return DataLoader(
+            subset,
+            batch_size = self.batch_size,
+            shuffle = train
+        )
+
+    def train_dataloader(self):
+        return self.get_dataloader(train=True)
+
+    def val_dataloader(self):
+        return self.get_dataloader(train=False)
+    
+
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 from torch.utils.data import Dataset, DataLoader, Subset
 import torch
