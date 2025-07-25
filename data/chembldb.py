@@ -2,7 +2,7 @@ import pandas as pd
 import pathlib
 import attr
 import sqlite3
-
+from typing import Optional
 
 CHEMBL_DB_PATH = "../raw-data/chembldb/chembl_35/chembl_35_sqlite/chembl_35.db"
 
@@ -66,16 +66,16 @@ class ChemblDBIndications:
     strings from the chembldb database.
     """
 
-    query_df: pd.DataFrame = attr.field(init=False)
+    query_df: Optional[pd.DataFrame] = None
 
     query: str = SQL_DRUG_INDICATION_QUERY
+    filename: str = "chembl_db_indications_preprocessed.csv"
 
     def _load_data(self):
         if not pathlib.Path.exists(pathlib.Path(CHEMBL_DB_PATH)):
             raise FileNotFoundError(f"{CHEMBL_DB_PATH} was not found")
         else:
             con = sqlite3.connect(CHEMBL_DB_PATH)
-            cur = con.cursor()
             pd_df = pd.read_sql_query(sql=SQL_DRUG_INDICATION_QUERY, con=con)
             con.close()
             return pd_df
@@ -92,6 +92,17 @@ class ChemblDBIndications:
         
         pd.get_dummies(raw_df, columns=['mesh_heading']) # One-hot like for disease indications
 
+        # Save the file
+        raw_df.to_csv(self.filename)
+
         return raw_df
 
-        
+    @classmethod
+    def load(cls):
+        if pathlib.Path.exists(pathlib.Path(cls.filename)):
+            return cls(query_df=pd.read_csv(cls.filename))
+        else:
+            print("Preprocessed data not found... attemping to load and preprocess")
+            return cls(
+                query_df = cls()._preprocess(cls()._load_data())
+            )
