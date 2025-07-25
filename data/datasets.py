@@ -16,7 +16,7 @@ class CharSMILESChEMBLIndications(Dataset):
     
     # Length and batch size for loading
     max_length: int = 128
-    batch_size: int = 128
+    batch_size: int = 64
     frac_train: float = 0.8
 
     char_to_idx: dict[str, int] = attr.field(init=False)
@@ -30,7 +30,8 @@ class CharSMILESChEMBLIndications(Dataset):
 
     def __attrs_post_init__(self):
         self.all_smiles: list[str] = self.all_data[self.smiles_column_title].tolist()
-        self.characters: list[str] = [self.padding_char] + list(set(''.join(self.all_smiles)))
+        self.characters: list[str] = list(set(''.join(self.all_smiles)))
+        self.characters.extend([self.padding_char])
 
         # This will only make sense if padding index is 0
         assert self.padding_index == 0

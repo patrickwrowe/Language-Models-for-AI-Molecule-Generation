@@ -124,6 +124,8 @@ def test_create_charsmilescchemblindications(dummy_indications):
     
     test_batch_size = 4
     dataset = CharSMILESChEMBLIndications(all_data = dummy_indications, batch_size=test_batch_size)
+    assert len(dataset.characters) == 23
+
     one_encoded = dataset[0]
     assert len(one_encoded) == 3
     assert one_encoded[0].shape[-1] == len(dataset.char_to_idx)
@@ -134,8 +136,7 @@ def test_create_charsmilescchemblindications(dummy_indications):
     one_batch = next(iter(dataloader))
 
     assert len(one_batch) == 3
-    assert one_encoded[0].shape[-1] == len(dataset.char_to_idx)
-    assert one_encoded[0].shape[0] == test_batch_size
+    assert one_batch[0].shape[-1] == len(dataset.char_to_idx)
+    assert one_batch[0].shape[0] == test_batch_size
 
-    breakpoint()
     
