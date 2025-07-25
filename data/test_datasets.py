@@ -120,7 +120,7 @@ def test_create_characterlevelsmiles_dataloader(smiles_strings):
     assert list(one_batch[0].shape) == [test_batch_size, test_length, len(dataset.char_to_idx)]
     assert list(one_batch[1].shape) == [test_batch_size, test_length]
     
-def test_create_charsmilescchemblindications(dummy_indications):
+def test_create_charsmiles_chembl_indications(dummy_indications):
     
     test_batch_size = 4
     dataset = CharSMILESChEMBLIndications(all_data = dummy_indications, batch_size=test_batch_size)
@@ -139,4 +139,7 @@ def test_create_charsmilescchemblindications(dummy_indications):
     assert one_batch[0].shape[-1] == len(dataset.char_to_idx)
     assert one_batch[0].shape[0] == test_batch_size
 
+def test_create_real_charsmiles_chembl_indications():
+    test_batch_size = 4
+    dataset = CharSMILESChEMBLIndications()
     

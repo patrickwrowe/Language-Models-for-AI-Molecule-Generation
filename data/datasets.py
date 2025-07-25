@@ -3,7 +3,10 @@ import torch
 import attr
 import pandas as pd
 
-from chembldb import ChemblDBIndications
+import sys
+sys.path.append("..")
+
+from data.chembldb import ChemblDBIndications
 
 
 @attr.define
@@ -12,10 +15,11 @@ class CharSMILESChEMBLIndications(Dataset):
     Character level SMILES database with disease indications
     """
 
-    all_data: pd.DataFrame = ChemblDBIndications()._preprocess(ChemblDBIndications()._load_data())
-    
     # Length and batch size for loading
-    max_length: int = 128
+    max_length: int = 512
+
+    all_data: pd.DataFrame = ChemblDBIndications()._preprocess(ChemblDBIndications()._load_data(), max_length=max_length)
+    
     batch_size: int = 64
     frac_train: float = 0.8
 
@@ -51,6 +55,10 @@ class CharSMILESChEMBLIndications(Dataset):
 
         get_tensor = lambda x: torch.tensor(x.values.astype(float), dtype=torch.float32)
         self.indications_tensor = get_tensor(self.all_data.drop(columns=[self.smiles_column_title]))
+        
+        # Shortcuts for sizes
+        self.vocab_size = len(self.char_to_idx)
+        self.num_indications = self.indications_tensor.shape[-1]
 
     def __len__(self) -> int:
         return len(self.all_data)
@@ -73,8 +81,14 @@ class CharSMILESChEMBLIndications(Dataset):
         Encodes a smiles string to a list of integers, pads to self.max_length with pad character.
         """
         encoded_smiles = [self.char_to_idx[c] for c in smiles]
-        encoded_smiles.extend([self.padding_index] * (self.max_length - len(encoded_smiles)))
+        if len(encoded_smiles) <= self.max_length:
+            encoded_smiles.extend([self.padding_index] * (self.max_length - len(encoded_smiles)))
+        elif len(encoded_smiles) > self.max_length:
+            # raise ValueError("SMILES String longer than defined max length.")
+            encoded_smiles = encoded_smiles[:512]
+
         return encoded_smiles
+    
 
     def get_dataloader(self, train: bool) -> DataLoader:
         # Create proper train/val split
@@ -97,6 +111,7 @@ class CharSMILESChEMBLIndications(Dataset):
 
     def val_dataloader(self) -> DataLoader:
         return self.get_dataloader(train=False)
+
     
 
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast

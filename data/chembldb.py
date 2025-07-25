@@ -80,8 +80,8 @@ class ChemblDBIndications:
             con.close()
             return pd_df
 
-    def _preprocess(self, raw_df: pd.DataFrame):
-        raw_df = raw_df[raw_df.max_phase_for_ind >= 3].drop(  # Don't want to train on things which weren't efficacious
+    def _preprocess(self, raw_df: pd.DataFrame, max_length: int = 512, min_phase_for_ind: int = 3, save_path: Optional[str] = None):
+        raw_df = raw_df[raw_df.max_phase_for_ind >= min_phase_for_ind].drop(  # Don't want to train on things which weren't efficacious
                             columns=[
                             'molregno', 
                             'record_id', 
@@ -90,17 +90,22 @@ class ChemblDBIndications:
                         ]  # Don't need identifiers etc
                     )
         
-        pd.get_dummies(raw_df, columns=['mesh_heading']) # One-hot like for disease indications
+        # Drop smiles with string lenth longer than max_length
+        raw_df = raw_df[raw_df["canonical_smiles"].str.split().str.len().lt(max_length)]
 
-        # Save the file
-        raw_df.to_csv(self.filename)
+        preprocessed_df = pd.get_dummies(raw_df, columns=['mesh_heading']) # One-hot like for disease indications
 
-        return raw_df
+        if save_path:
+            # Save the file
+            preprocessed_df.to_csv(self.filename)
+
+        return preprocessed_df
 
     @classmethod
-    def load(cls):
-        if pathlib.Path.exists(pathlib.Path(cls.filename)):
-            return cls(query_df=pd.read_csv(cls.filename))
+    def load(cls, load_path: Optional[str] = None):
+        if load_path and pathlib.Path.exists(pathlib.Path(load_path)):
+            print("loading from file")
+            return cls(query_df=pd.read_csv(load_path))
         else:
             print("Preprocessed data not found... attemping to load and preprocess")
             return cls(

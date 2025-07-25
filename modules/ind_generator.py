@@ -10,13 +10,13 @@ class SmilesIndGeneratorRNN(nn.Module):
     num_hiddens: int
     num_layers: int
 
-    learning_rate: float = 0.1
+    learning_rate: float = 0.001
     weight_decay: float = 0.01
 
     def __attrs_post_init__(self):
         super().__init__()
 
-
+        # One hidden layer per state to prep
         self.ind_to_state = nn.Linear(
             in_features=self.num_indications, 
             out_features=self.num_hiddens
@@ -27,18 +27,19 @@ class SmilesIndGeneratorRNN(nn.Module):
         )
 
         self.rnn = nn.RNN(
-            in_features = self.vocab_size,
-            out_features = self.num_hiddens,
-            hidden_size = self.num_layers,
-            batch_first=True
+            self.vocab_size,
+            self.num_hiddens,
+            num_layers = self.num_layers,
+            batch_first = True
         )
-
 
     def forward(self, seq_tensor: torch.Tensor, ind_tensor: torch.Tensor):
         # First, condition the state
-        state = self.ind_to_state(ind_tensor)
+        
+        state = self.ind_to_state(ind_tensor.unsqueeze(0).repeat(self.num_layers, 1, 1))
+
         output, _ = self.rnn(seq_tensor, state)
-        output = self.linear(output)
+        output = self.rnn_to_out(output)
         return output
 
     def loss(self, y_hat, y):
