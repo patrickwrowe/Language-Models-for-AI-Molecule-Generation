@@ -140,9 +140,13 @@ class SMILESDatasetContinuous(Dataset):
         start = idx * self.length 
         end = start + self.length
         encoding = self.encoded_smiles[start:end + 1]
-        text_tensor = self.encoding_to_one_hot(encoding[:-1])
+
+        input_seq = encoding[:-1]
+        target_seq = encoding[1:]
+
+        text_tensor = self.encoding_to_one_hot(input_seq)
+        target_indices = torch.tensor(target_seq, dtype=torch.long)
         
-        target_indices = torch.tensor(encoding[1:], dtype=torch.long)
         return text_tensor, target_indices
 
     def encode_smiles_to_one_hot(self, smiles) -> torch.Tensor:
