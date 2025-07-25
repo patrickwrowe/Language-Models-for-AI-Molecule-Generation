@@ -15,24 +15,42 @@ class CharSMILESChEMBLIndications(Dataset):
     all_data: pd.DataFrame = ChemblDBIndications()._preprocess(ChemblDBIndications()._load_data())
     
     # Length and batch size for loading
-    max_length: int = 64
+    max_length: int = 128
     batch_size: int = 128
     frac_train: float = 0.8
 
     char_to_idx: dict[str, int] = attr.field(init=False)
     idx_to_char: dict[int, str] = attr.field(init=False)
 
+    # account for padding, to be more cleanly handled with tokenizers
+    padding_index = 0
+    padding_char = " "
+
+    smiles_column_title = "canonical_smiles"
+
     def __attrs_post_init__(self):
-        self.all_smiles: list[str] = self.all_data["canonical_smiles"].tolist()
-        self.characters: list[str] = list(set(''.join(self.all_smiles)))
+        self.all_smiles: list[str] = self.all_data[self.smiles_column_title].tolist()
+        self.characters: list[str] = [self.padding_char] + list(set(''.join(self.all_smiles)))
 
-        self.char_to_idx = {c: inx for inx, c in enumerate(self.characters)}
-        self.idx_to_char = {inx: c for inx, c in enumerate(self.characters)}
+        # This will only make sense if padding index is 0
+        assert self.padding_index == 0
 
+        # Create char to index mappings, RESERVE index 0 for padding
+        self.char_to_idx = {c: inx + 1 for inx, c in enumerate(self.characters)}
+        self.idx_to_char = {inx + 1: c for inx, c in enumerate(self.characters)}
+        
+        # padding characters
+        self.char_to_idx[self.padding_char] = self.padding_index
+        self.idx_to_char[self.padding_index] = self.padding_char
+
+        # Encode all smiels strings
         self.encoded_smiles = [[self.char_to_idx[c] for c in smiles_string] for smiles_string in self.all_smiles]
+        # padding them all to have same tensor length
+        for smiles in self.encoded_smiles:
+            smiles.extend([self.padding_index] * (self.max_length - len(smiles)))
 
         get_tensor = lambda x: torch.tensor(x.values.astype(float), dtype=torch.float32)
-        self.indications_tensor = get_tensor(self.all_data.drop(columns=["canonical_smiles"]))
+        self.indications_tensor = get_tensor(self.all_data.drop(columns=[self.smiles_column_title]))
 
     def __len__(self):
         return len(self.all_data)
@@ -102,6 +120,7 @@ class SMILESDatasetContinuous(Dataset):
 
     # Batching and splitting
     batch_size: int = 128
+    frac_train: float = 0.8
 
     all_smiles: str = attr.field(init=False)
     encoded_smiles: torch.Tensor = attr.field(init=False)
@@ -111,7 +130,7 @@ class SMILESDatasetContinuous(Dataset):
 
         # Efficient but causes memory issues for large datasets
         # Requires clever caching to work properly
-        self.encoded_smiles = self.tokenizer.encode(self.all_smiles)
+        self.encoded_smiles = torch.tensor(self.tokenizer.encode(self.all_smiles))
 
     def __len__(self):
         return len(self.encoded_smiles) // self.length
@@ -151,8 +170,17 @@ class SMILESDatasetContinuous(Dataset):
         return one_hot
      
     def get_dataloader(self, train: bool):
+        # Create proper train/val split
+        total_len = len(self)
+        train_len = int(self.frac_train * total_len)  # 80% for training
+        
+        if train:
+            subset = Subset(self, range(train_len))
+        else:
+            subset = Subset(self, range(train_len, total_len))
+            
         return DataLoader(
-            self,
+            subset,
             batch_size = self.batch_size,
             shuffle = train
         )
@@ -198,12 +226,15 @@ class CharacterLevelSMILES(Dataset):
 
         self.encoded_smiles = [self.char_to_idx[c] for c in self.all_smiles]
 
+        # To account for single character shifted input/target indexing 
+        self.length += 1
+
     def __len__(self):
         return len(self.all_smiles) // self.length
 
     def __getitem__(self, idx: int):
         start = idx * self.length
-        end = start + self.length
+        end = start + self.length 
         
         # Get the character indices for this slice
         if end >= len(self.encoded_smiles):
