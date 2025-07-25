@@ -34,6 +34,8 @@ class CharSMILESChEMBLIndications(Dataset):
         self.characters.extend([self.padding_char])
 
         # This will only make sense if padding index is 0
+        # This class is soon to be superceded with a variant using proper tokenizers 
+        # So I won't worry about writing better logic to handle different padding styles
         assert self.padding_index == 0
 
         # Create char to index mappings, RESERVE index 0 for padding
@@ -44,19 +46,16 @@ class CharSMILESChEMBLIndications(Dataset):
         self.char_to_idx[self.padding_char] = self.padding_index
         self.idx_to_char[self.padding_index] = self.padding_char
 
-        # Encode all smiels strings
-        self.encoded_smiles = [[self.char_to_idx[c] for c in smiles_string] for smiles_string in self.all_smiles]
-        # padding them all to have same tensor length
-        for smiles in self.encoded_smiles:
-            smiles.extend([self.padding_index] * (self.max_length - len(smiles)))
+        # Encode all smiels strings and pad to appropriate length
+        self.encoded_smiles = [self.encode_smiles_string(smiles_string) for smiles_string in self.all_smiles]
 
         get_tensor = lambda x: torch.tensor(x.values.astype(float), dtype=torch.float32)
         self.indications_tensor = get_tensor(self.all_data.drop(columns=[self.smiles_column_title]))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.all_data)
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
         indications = self.indications_tensor[idx, :]
 
@@ -68,8 +67,16 @@ class CharSMILESChEMBLIndications(Dataset):
             ).float()
         
         return smiles_one_hot, indications, encoded_smiles
+    
+    def encode_smiles_string(self, smiles: str) -> list[int]:
+        """
+        Encodes a smiles string to a list of integers, pads to self.max_length with pad character.
+        """
+        encoded_smiles = [self.char_to_idx[c] for c in smiles]
+        encoded_smiles.extend([self.padding_index] * (self.max_length - len(encoded_smiles)))
+        return encoded_smiles
 
-    def get_dataloader(self, train: bool):
+    def get_dataloader(self, train: bool) -> DataLoader:
         # Create proper train/val split
         total_len = len(self)
         train_len = int(self.frac_train * total_len)  # 80% for training
@@ -85,10 +92,10 @@ class CharSMILESChEMBLIndications(Dataset):
             shuffle = train
         )
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> DataLoader:
         return self.get_dataloader(train=True)
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> DataLoader:
         return self.get_dataloader(train=False)
     
 
@@ -104,11 +111,10 @@ class SMILESDatasetContinuous(Dataset):
     Attributes:
         smiles_list (list[str]): List of SMILES strings representing molecules.
         tokenizer (PreTrainedTokenizerFast): HuggingFace tokenizer for SMILES strings.
-        max_length (int): Maximum length for tokenized SMILES sequences (default: 2048).
+        max_length (int): Maximum length for tokenized SMILES sequences.
     Methods:
         __len__(): Returns the number of SMILES strings in the dataset.
-        __getitem__(idx): Tokenizes and encodes the SMILES string at the given index, returning a dictionary
-            containing input tensors for model training, including 'input_ids', 'attention_mask', and 'labels'.
+        __getitem__(idx): Tokenizes and encodes the SMILES string at the given index
     """
 
     # A list of smiles strings, e.g. ["CO", "CCC(C=O)"]
@@ -133,10 +139,10 @@ class SMILESDatasetContinuous(Dataset):
         # Requires clever caching to work properly
         self.encoded_smiles = torch.tensor(self.tokenizer.encode(self.all_smiles))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.encoded_smiles) // self.length
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         start = idx * self.length 
         end = start + self.length
         encoding = self.encoded_smiles[start:end + 1]
@@ -146,13 +152,13 @@ class SMILESDatasetContinuous(Dataset):
 
         text_tensor = self.encoding_to_one_hot(input_seq)
         target_indices = torch.tensor(target_seq, dtype=torch.long)
-        
+
         return text_tensor, target_indices
 
     def encode_smiles_to_one_hot(self, smiles) -> torch.Tensor:
         return self.encoding_to_one_hot(self.encode_smiles(smiles))
 
-    def encode_smiles(self, smiles):
+    def encode_smiles(self, smiles) -> list[int]:
         # Seems super inefficient to encode each item one-by-one...
         # But I also don't want to store everything in memory.
         encoding = self.tokenizer.encode(
@@ -164,7 +170,7 @@ class SMILESDatasetContinuous(Dataset):
         
         return encoding
     
-    def encoding_to_one_hot(self, encoding):
+    def encoding_to_one_hot(self, encoding) -> torch.Tensor:
         input_ids = torch.tensor(encoding, dtype=torch.long)
 
         one_hot = torch.nn.functional.one_hot(
@@ -174,7 +180,7 @@ class SMILESDatasetContinuous(Dataset):
 
         return one_hot
      
-    def get_dataloader(self, train: bool):
+    def get_dataloader(self, train: bool) -> DataLoader:
         # Create proper train/val split
         total_len = len(self)
         train_len = int(self.frac_train * total_len)  # 80% for training
@@ -190,10 +196,10 @@ class SMILESDatasetContinuous(Dataset):
             shuffle = train
         )
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> DataLoader:
         return self.get_dataloader(train=True)
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> DataLoader:
         return self.get_dataloader(train=False)
 
 
@@ -234,10 +240,10 @@ class CharacterLevelSMILES(Dataset):
         # To account for single character shifted input/target indexing 
         self.length += 1
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.all_smiles) // self.length
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         start = idx * self.length
         end = start + self.length 
         
@@ -259,7 +265,7 @@ class CharacterLevelSMILES(Dataset):
         
         return input_one_hot, target_tensor
 
-    def get_dataloader(self, train: bool):
+    def get_dataloader(self, train: bool) -> DataLoader:
         # Create proper train/val split
         total_len = len(self)
         train_len = int(self.frac_train * total_len)  # 80% for training
@@ -275,10 +281,10 @@ class CharacterLevelSMILES(Dataset):
             shuffle = train
         )
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> DataLoader:
         return self.get_dataloader(train=True)
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> DataLoader:
         return self.get_dataloader(train=False)
 
     
