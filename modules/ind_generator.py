@@ -13,6 +13,8 @@ class SmilesIndGeneratorRNN(nn.Module):
     learning_rate: float = 0.001
     weight_decay: float = 0.01
 
+    dropout_pc: float = 0.2
+
     def __attrs_post_init__(self):
         super().__init__()
 
@@ -32,15 +34,21 @@ class SmilesIndGeneratorRNN(nn.Module):
             num_layers = self.num_layers,
             batch_first = True
         )
+        
+        self.dropout = nn.Dropout(0.2)
+
+    def init_state(self, ind_tensor: torch.Tensor):
+        state = self.ind_to_state(ind_tensor.unsqueeze(0).repeat(self.num_layers, 1, 1))
+        return state
 
     def forward(self, seq_tensor: torch.Tensor, ind_tensor: torch.Tensor):
         # First, condition the state
-        
         state = self.ind_to_state(ind_tensor.unsqueeze(0).repeat(self.num_layers, 1, 1))
 
-        output, _ = self.rnn(seq_tensor, state)
+        output, state = self.rnn(seq_tensor, state)
+        output = self.dropout(output)
         output = self.rnn_to_out(output)
-        return output
+        return output, state
 
     def loss(self, y_hat, y):
         loss_function = nn.CrossEntropyLoss()
@@ -65,7 +73,7 @@ class SmilesIndGeneratorRNN(nn.Module):
         return optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
 
     def training_step(self, batch):
-        preds = self(*batch[:-1])
+        preds, _ = self(*batch[:-1])
         labels = batch[-1]
         
         # Flatten for cross-entropy loss
@@ -76,3 +84,5 @@ class SmilesIndGeneratorRNN(nn.Module):
 
     def validation_step(self, batch):
         return self.training_step(batch)
+
+    

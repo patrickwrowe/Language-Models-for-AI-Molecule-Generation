@@ -54,6 +54,7 @@ class CharSMILESChEMBLIndications(Dataset):
         self.encoded_smiles = [self.encode_smiles_string(smiles_string) for smiles_string in self.all_smiles]
 
         get_tensor = lambda x: torch.tensor(x.values.astype(float), dtype=torch.float32)
+        self.indications_names = self.all_data.columns.drop(self.smiles_column_title).to_list()
         self.indications_tensor = get_tensor(self.all_data.drop(columns=[self.smiles_column_title]))
         
         # Shortcuts for sizes
@@ -89,6 +90,11 @@ class CharSMILESChEMBLIndications(Dataset):
 
         return encoded_smiles
     
+    def get_indications_tensor(self, indication: str):
+        indication_index = self.indications_names.index(indication)
+        indication_tensor = torch.zeros(len(self.indications_names))
+        indication_tensor[indication_index] = 1
+        return indication_tensor
 
     def get_dataloader(self, train: bool) -> DataLoader:
         # Create proper train/val split
