@@ -76,6 +76,8 @@ class simpleRNN(nn.Module):
         self.load_state_dict(torch.load(path))
         self.eval()
 
+    
+
 @attrs.define(eq=False)
 class simpleLSTM(simpleRNN):
     num_hiddens: int = attrs.field(default=100)
@@ -128,7 +130,7 @@ def simple_generate(prefix, num_chars, model, char_to_idx_mapping, idx_to_char_m
 
             if next_char == ' ' or next_char == '': # EOS token
                 break
-            
+
             generated += next_char
             
             # print(f"Step {i+1}: Added '{next_char}' -> '{generated}'")
