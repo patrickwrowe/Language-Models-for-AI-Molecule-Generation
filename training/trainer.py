@@ -5,6 +5,7 @@ from torch.nn import Module
 from torch.optim.optimizer import Optimizer
 import numpy as np
 from typing import Optional
+import datetime
 
 @attrs.define(slots=False)
 class Trainer:
@@ -76,10 +77,12 @@ class Trainer:
             "training_epochs": [],
         }
 
+        self.metadata["start_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         for self.epoch in range(self.max_epochs):
             # one epoch fits over the entire training dataset
             # then evaluates on validation dataset for us
             self.fit_epoch()
+        self.metadata["end_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def maybe_batch_to_gpu(self, batch):
         batch = [b.to(try_gpu()) for b in batch]
@@ -90,9 +93,10 @@ class Trainer:
         self.model.train()  # ensure model is set to training mode
         train_loss = 0.0  # Initialise loss to 0
 
+        epoch_start_time = datetime.datetime.now()
         # main training loop over batches in train_dataloader
         for self.train_batch_idx, batch in enumerate(self.train_dataloader):
-
+            
             end = "\r" if self.train_batch_idx < self.num_train_batches else "\n"
             print(f"Training batch {self.train_batch_idx + 1}/{self.num_train_batches}..."
                   f" (Epoch {self.epoch + 1}/{self.max_epochs})", end=end)
@@ -122,6 +126,11 @@ class Trainer:
 
             train_loss += loss.item()
     
+        # end of epoch, print out the time taken
+        epoch_end_time = datetime.datetime.now()
+        epoch_duration = (epoch_end_time - epoch_start_time).total_seconds()
+        print(f"Epoch {self.epoch + 1} completed in {epoch_duration:.2f} seconds.")
+
         # average the loss over all the batches
         avg_train_loss = train_loss / self.num_train_batches
 
@@ -144,6 +153,9 @@ class Trainer:
         self.metadata["training_epochs"].append(
             {
                 "epoch": self.epoch,
+                "epoch start_time": epoch_start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "epoch end_time": epoch_end_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "epoch duration": epoch_duration,
                 "train_loss": train_loss,
                 "val_loss": val_loss,
                 "avg_train_loss": avg_train_loss,

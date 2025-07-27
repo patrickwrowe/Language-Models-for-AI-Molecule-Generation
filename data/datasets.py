@@ -308,4 +308,12 @@ class CharacterLevelSMILES(Dataset):
     def val_dataloader(self) -> DataLoader:
         return self.get_dataloader(train=False)
 
+    def decode_indices_to_string(self, encoded_indices: list):
+        decoded = ''.join([self.idx_to_char[int(inx)] for inx in encoded_indices])
+        return decoded
+
+    def encode_string_to_indices(self, smiles_string: str):
+        encoded = [self.char_to_idx[c] for c in smiles_string]
+        return encoded
+
     

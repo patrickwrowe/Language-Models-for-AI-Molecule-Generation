@@ -125,6 +125,10 @@ def simple_generate(prefix, num_chars, model, char_to_idx_mapping, idx_to_char_m
             
             # Decode and append
             next_char = decode_indices_to_string([next_token], idx_to_char_mapping)
+
+            if next_char == ' ' or next_char == '': # EOS token
+                break
+            
             generated += next_char
             
             # print(f"Step {i+1}: Added '{next_char}' -> '{generated}'")

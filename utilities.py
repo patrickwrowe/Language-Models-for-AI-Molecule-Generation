@@ -3,6 +3,8 @@ import torch
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem import Draw
+import os
+import datetime
 
 def extract_training_losses(metadata: dict) -> dict:
     """
@@ -50,78 +52,11 @@ def extract_training_losses(metadata: dict) -> dict:
     }
 
 
-def generate_sequence(prefix, num_chars, model, dataset, device=None, temperature=1.0):
+def validate_smiles_strings(smiles_list: list[str]) -> list[bool]:
     """
-    Generate a sequence of characters using the RNN model.
-    
-    Args:
-        prefix (str): Initial string to start generation from
-        num_chars (int): Number of characters to generate
-        model: The trained RNN model
-        dataset: Dataset containing tokenizer and encoding methods
-        device: Device to run inference on
-        temperature (float): Sampling temperature (1.0 = deterministic, >1.0 = more random)
-    
-    Returns:
-        str: Generated sequence including the prefix
+    Validate a list of SMILES strings and return a list of booleans indicating validity.
     """
-    model.eval()  # Set model to evaluation mode
-    
-    with torch.no_grad():
-        generated = prefix
-        
-        for _ in range(num_chars):
-            # Encode the current generated text
-            current_encoded = dataset.encoding_to_one_hot(dataset.tokenizer.encode(generated))
-            current_tensor = torch.tensor(current_encoded, device=device, dtype=torch.float32)
-            
-            # Get model prediction
-            output = model(current_tensor.unsqueeze(0))  # Add batch dimension
-            
-            # Get the last timestep's logits
-            last_logits = output[0, -1, :]  # [vocab_size]
-            
-            # temperature probability
-            last_logits = last_logits / temperature
-            probs = torch.softmax(last_logits, dim=-1)
-            next_token_id = torch.multinomial(probs, num_samples=1).item()
-            
-            # Decode the token and add to generated text
-            next_char = dataset.tokenizer.decode([next_token_id])
-            generated += next_char
-            
-            # Limit length to prevent runaway generation
-            if len(generated) > len(prefix) + num_chars * 2:
-                break
-                
-    return generated
-
-def simple_generate(prefix, num_chars, model, dataset, device=None):
-    """
-    Simple character-by-character generation function.
-    """
-    model.eval()
-    generated = prefix
-    
-    with torch.no_grad():
-        for i in range(num_chars):
-            # Encode current text
-            encoded = dataset.encoding_to_one_hot(dataset.tokenizer.encode(generated))
-            input_tensor = torch.tensor(encoded, device=device, dtype=torch.float32)
-            
-            # Get prediction
-            output = model(input_tensor.unsqueeze(0))  # Add batch dim
-            
-            # Get most likely next token
-            next_token = output[0, -1, :].argmax().item()
-            
-            # Decode and append
-            next_char = dataset.tokenizer.decode([next_token])
-            generated += next_char
-            
-            print(f"Step {i+1}: Added '{next_char}' -> '{generated}'")
-            
-    return generated
+    return [validate_smiles_string(smiles) for smiles in smiles_list]
 
 def validate_smiles_string(smiles: str):
     
@@ -139,4 +74,14 @@ def draw_molecule(smiles: str):
         mol = Chem.MolFromSmiles(smiles)
         return Draw.MolToImage(mol)
 
+def save_model_weights(prefix, model, data):
+    if not os.path.exists(os.path.join("../", "models")):
+        os.makedirs(os.path.join("../", "models"))
+        
+    save_name = prefix + model.__class__.__name__ \
+                + "-" + data.__class__.__name__ \
+                + "-" + datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S') \
+                + ".pt"
+    print(f"Saving model to {os.path.join('../', 'models', save_name)}")
+    model.save_weights(os.path.join("../", "models", save_name))
     
