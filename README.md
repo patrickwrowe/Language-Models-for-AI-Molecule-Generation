@@ -2,9 +2,12 @@
 
 This repository contains code and notebooks for training and using machine learning language models to generate chemical structures, specifically SMILES strings. The models are designed to learn the syntax and semantics of chemical representations, enabling the generation of novel molecules.
 
-## Example, generating Caffeine-Like molecules with an LSTM.
+Most language modelling tools are aimed at natural language processing, but the chemical language of SMILES strings is a rich and complex language in its own right, with syntax, grammar and vocabulary all of its own. This repository provides tools for training and using models to generate SMILES strings, which can be used to explore the chemical space and generate novel molecules.
+
+## Getting Started
 
 ```python
+# Getting started: Load a pre-trained language model for generating SMILES strings.
 load_model_path = "../models/Chembl-Mini-simpleLSTM-CharacterLevelSMILES-2025-07-27-09-30-38.pt"
 
 
@@ -24,12 +27,13 @@ model.load_weights(
         path = load_model_path,
 )
 
+# Use the GPU if we can
 device="cuda" if torch.cuda.is_available() else "cpu"
     model.to(device)
 ```
     
 
-## Below, we ask the model to generate 20 totally random molecules, by providing it with an empty seed string.
+## Random generation of 20 molecules, understanding overall model performance.
 
 
 ```python
@@ -94,24 +98,10 @@ for i in range(20):
     [09:32:05] ~~~~~~~~~~~~~^
     [09:32:05] SMILES Parse Error: Failed parsing SMILES ' Oc1cccc(Cl)c1)c1cccc(C(=O)O)c1' for input: ' Oc1cccc(Cl)c1)c1cccc(C(=O)O)c1'
 
-
-    Requested up to 100 characters, got: 42
-    Molecule Canonical SMILES:  COc1ccc(NC(=O)CCN2CCN(c3ccccc3)CC2)c(C)c1
-    Generated SMILES is valid.
-    Requested up to 100 characters, got: 46
-    Molecule Canonical SMILES:  O=C(NCc1ccccc1)C(=O)N1CCC(C(=O)NCc2ccccc2)CC1
-    Generated SMILES is valid.
-    Requested up to 100 characters, got: 101
-    Molecule Canonical SMILES:  O(C(=O)O)C(=O)COC(=O)CNC(=O)[C@H](CCCCNC(=O)[C@H](CCCNC(=N)N)NC(=O)[C@H](CCCNC(=N)N)NC(=O)[C@H](CCCN
-    Generated SMILES is not valid.
-    Requested up to 100 characters, got: 42
-    Molecule Canonical SMILES:  CC(C)CCN(CCCCN)C(=O)CCc1ccc(-c2ccccc2)cc1
-    Generated SMILES is valid.
-
     [OUTPUT CURTAILED]
 
 
-## Visualising the attemps at generating molecules
+### General Observations: Visualising the attempts at generating molecules
 
 For such a simple model, the results of this test are rather impressive. The model has learned to generate valid SMILES strings, which correspond to real molecules. In order to do this, the model will have implicitly "learned" the correct valences for atoms, common functional groups, and the rules of SMILES syntax, which is not a trivial task.
 
@@ -121,13 +111,15 @@ Of course, because SMILES strings are syntactially rigid, often with long-range 
 
 Above, we can see that the model has learned to generate valid SMILES strings, but we can also see information on the types of errors the model makes. These fall into two categories, syntactic errors, where the model generates a string which is not valid SMILES, and semantic errors, where the model generates a valid SMILES string but one which does not correspond to a real molecule. 
 
-Syntactic: e.g. The model has a tendancy to open parentheses but not close them, or opening rings but not specifying where they close.
+Syntactic: e.g. The model has a tendancy to open parentheses but not close them, or opening rings but not specifying where they close:
+
 `SMILES Parse Error: extra open parentheses while parsing: CC(=O)N[C@@H](CCCCN)C(=O)N[C@@H](CCCCN)C(=O)N[C@@H](CCCN=C(N)N)C(=O)N[C@@H](CC(C)C)C(=O)N[C@@H](CCCC
 SMILES Parse Error: check for mistakes around position 96:
 (CC(C)C)C(=O)N[C@@H](CCCC
 `
 
 Semantic: E.g. Occasionally generating molecules where atoms have incorrect valences (e.g. F with two bonds):
+
 `SMILES Parse Error: Failed parsing SMILES ' HC(=O)N[C@H](C(=O)N[C@@H](CCCCN)C(=O)N[C@@H](CCCCN)C(=O)N[C@@H](CCCCN)C(=O)N[C@@H](Cc1ccc(O)cc1)C(=O''
 Explicit valence for atom # 0 F, 2, is greater than permitted` 
 
@@ -143,11 +135,10 @@ for img in images:
 ```
 
 
-## Generated 14 valid and 6 invalid SMILES strings out of 20 attempts.
+### Generated 14 valid and 6 invalid SMILES strings out of 20 attempts.
 
 
-
-## Sample of Generated Molecules
+### Sample of Generated Molecules
 
     
 ![png](readme_img/character_level_rnn_generator_13_3.png)
@@ -163,7 +154,7 @@ for img in images:
     
 
 
-## Generating random molecules is fun, but a real example of where this sort of model might be useful would be the generation of molecules with specific properties...
+## Application Example: Generating Caffeine-Like molecules with an LSTM.
 
 In other models, we'll work to condition the initial state of the model with a vector of desired properties extracted from CHEMBL, but for now, we could say that we hope to generate _variants_ of an existing molecule, but with random, physically plausible changes to the structure.
 
