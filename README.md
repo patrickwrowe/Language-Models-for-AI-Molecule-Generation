@@ -213,6 +213,12 @@ for img in images:
 
 ## Generated 10 valid caffeine-like molecules and 10 invalid SMILES strings out of 20 attempts.
 
+Here is the structure of caffeiene for reference:
+
+![caffeine](readme_img/caffeine_reference.png)
+
+Below, we can see examples of some of the caffeine-like molecules generated with our model. The model has learned to generate molecules which are structurally similar to caffeine, but with variations in the side chains and functional groups. Some of these molecules are quite complex, with multiple rings and functional groups, while others are simpler. 
+
 ## Sample of Generated Molecules
    
 ![png](readme_img/character_level_rnn_generator_16_2.png)
