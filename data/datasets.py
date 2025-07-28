@@ -68,14 +68,17 @@ class CharSMILESChEMBLIndications(Dataset):
 
         indications = self.indications_tensor[idx, :]
 
-        encoded_smiles = torch.tensor(self.encoded_smiles[idx])
+        input_seq = self.encoded_smiles[idx][:-1]
+        target_seq = self.encoded_smiles[idx][1:]
+
+        target_seq = torch.tensor(target_seq, dtype=torch.long)
 
         smiles_one_hot = torch.nn.functional.one_hot(
-            encoded_smiles, 
+            torch.tensor(input_seq), 
             num_classes=len(self.characters)
             ).float()
         
-        return smiles_one_hot, indications, encoded_smiles
+        return smiles_one_hot, indications, target_seq
     
     def encode_smiles_string(self, smiles: str) -> list[int]:
         """

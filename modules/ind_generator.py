@@ -70,19 +70,20 @@ class SmilesIndGeneratorRNN(nn.Module):
 
     def forward(self, seq_tensor: torch.Tensor, ind_tensor: Optional[torch.Tensor] = None, state=None):
         
-        if not state and ind_tensor is not None:
-            # First, condition the state with indication tensor
-            initial_state = self.init_state(ind_tensor)
-        else:
-            initial_state = state
+        # if not state and ind_tensor is not None:
+        #     # First, condition the state with indication tensor
+        #     initial_state = self.init_state(ind_tensor)
+        # else:
+        #     initial_state = state
         
-        output, state = self.rnn(seq_tensor, initial_state)
+        # output, state = self.rnn(seq_tensor, initial_state)
+        output, _ = self.rnn(seq_tensor)
         output = self.dropout(output)
         output = self.rnn_to_out(output)
         return output, state
 
     def loss(self, y_hat, y):
-        loss_function = nn.CrossEntropyLoss()
+        loss_function = nn.CrossEntropyLoss(ignore_index=0)  
         return loss_function(y_hat, y)
 
     def initialize_parameters(self, module):

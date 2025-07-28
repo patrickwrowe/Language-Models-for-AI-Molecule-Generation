@@ -91,20 +91,20 @@ class ChemblDBIndications:
                     )
         
 
-        # Drop rarely occuring indications, replace with Other
-        min_indications = 50
-        indication_counts = raw_df['mesh_heading'].value_counts()
-        # raw_df = raw_df[raw_df['mesh_heading'].isin(indication_counts[indication_counts >= min_indications].index)]
-        # Replace rare indications with 'Other'
-        raw_df['mesh_heading'] = raw_df['mesh_heading'].replace(
-            to_replace=indication_counts[indication_counts < min_indications].index, 
-            value='Other'
-        )
+        print("Preprocessing")
 
         # Drop smiles with string lenth longer than max_length
         raw_df = raw_df[raw_df["canonical_smiles"].str.split().str.len().lt(max_length)]
 
         preprocessed_df = pd.get_dummies(raw_df, columns=['mesh_heading']) # One-hot like for disease indications
+
+        # Drop rarely occuring indications, replace with Other
+        min_indications = 50
+        indication_counts = preprocessed_df.filter(like='mesh_heading_').sum()
+        rare_indications = indication_counts[indication_counts < min_indications].index.tolist()
+        if rare_indications:
+            preprocessed_df['mesh_heading_Other'] = preprocessed_df[rare_indications].sum(axis=1).astype(bool)
+            preprocessed_df.drop(columns=rare_indications, inplace=True)
 
         if save_path:
             # Save the file
