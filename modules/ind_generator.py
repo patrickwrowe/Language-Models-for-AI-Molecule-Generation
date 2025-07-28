@@ -1,6 +1,7 @@
 import torch
 import attrs
 from torch import nn, optim
+from typing import Optional
 
 @attrs.define(eq=False)
 class SmilesIndGeneratorRNN(nn.Module):
@@ -12,10 +13,10 @@ class SmilesIndGeneratorRNN(nn.Module):
 
     learning_rate: float = 0.001
     weight_decay: float = 0.01
+
     output_dropout: float = 0.2
     rnn_dropout: float = 0.2
-
-    dropout_pc: float = 0.2
+    state_dropout: float = 0.2
 
     def __attrs_post_init__(self):
         super().__init__()
@@ -44,6 +45,7 @@ class SmilesIndGeneratorRNN(nn.Module):
         )
         
         self.dropout = nn.Dropout(self.output_dropout)
+        self.init_state_dropout = nn.Dropout(self.state_dropout)
 
     def init_state(self, ind_tensor: torch.Tensor):
         """
@@ -55,11 +57,10 @@ class SmilesIndGeneratorRNN(nn.Module):
         Returns:
             tuple: (h_0, c_0) where each has shape (num_layers, batch_size, num_hiddens)
         """
-        batch_size = ind_tensor.size(0)
         
         # Transform indication vector to initial hidden and cell states
-        h_0_flat = self.ind_to_h_0(ind_tensor)  # (batch_size, num_hiddens)
-        c_0_flat = self.ind_to_c_0(ind_tensor)  # (batch_size, num_hiddens)
+        h_0_flat = self.init_state_dropout(self.ind_to_h_0(ind_tensor))  # (batch_size, num_hiddens)
+        c_0_flat = self.init_state_dropout(self.ind_to_c_0(ind_tensor))  # (batch_size, num_hiddens)
         
         # Reshape to match LSTM expected format: (num_layers, batch_size, num_hiddens)
         h_0 = h_0_flat.unsqueeze(0).repeat(self.num_layers, 1, 1)
@@ -67,9 +68,13 @@ class SmilesIndGeneratorRNN(nn.Module):
         
         return (h_0, c_0)
 
-    def forward(self, seq_tensor: torch.Tensor, ind_tensor: torch.Tensor):
-        # First, condition the state with indication tensor
-        initial_state = self.init_state(ind_tensor)
+    def forward(self, seq_tensor: torch.Tensor, ind_tensor: Optional[torch.Tensor] = None, state=None):
+        
+        if not state and ind_tensor is not None:
+            # First, condition the state with indication tensor
+            initial_state = self.init_state(ind_tensor)
+        else:
+            initial_state = state
         
         output, state = self.rnn(seq_tensor, initial_state)
         output = self.dropout(output)

@@ -90,6 +90,17 @@ class ChemblDBIndications:
                         ]  # Don't need identifiers etc
                     )
         
+
+        # Drop rarely occuring indications, replace with Other
+        min_indications = 50
+        indication_counts = raw_df['mesh_heading'].value_counts()
+        # raw_df = raw_df[raw_df['mesh_heading'].isin(indication_counts[indication_counts >= min_indications].index)]
+        # Replace rare indications with 'Other'
+        raw_df['mesh_heading'] = raw_df['mesh_heading'].replace(
+            to_replace=indication_counts[indication_counts < min_indications].index, 
+            value='Other'
+        )
+
         # Drop smiles with string lenth longer than max_length
         raw_df = raw_df[raw_df["canonical_smiles"].str.split().str.len().lt(max_length)]
 
