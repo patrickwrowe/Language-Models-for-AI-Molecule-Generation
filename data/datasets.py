@@ -28,14 +28,19 @@ class CharSMILESChEMBLIndications(Dataset):
 
     # account for padding, to be more cleanly handled with tokenizers
     padding_index = 0
-    padding_char = " "
+    padding_char = " "  
+    end_char = "£"
 
     smiles_column_title = "canonical_smiles"
 
     def __attrs_post_init__(self):
         self.all_smiles: list[str] = self.all_data[self.smiles_column_title].tolist()
+
+        self.all_smiles = [smiles + self.end_char for smiles in self.all_smiles]  # Add end character to each SMILES string or molecules never end
         self.characters: list[str] = list(set(''.join(self.all_smiles)))
-        self.characters.extend([self.padding_char])
+        self.characters.extend([
+            self.padding_char
+        ])
 
         # This will only make sense if padding index is 0
         # This class is soon to be superceded with a variant using proper tokenizers 
@@ -85,11 +90,12 @@ class CharSMILESChEMBLIndications(Dataset):
         """
         encoded_smiles = [self.char_to_idx[c] for c in smiles]
 
-        if len(encoded_smiles) <= self.max_length:
-            encoded_smiles.extend([self.padding_index] * (self.max_length - len(encoded_smiles)))
-        elif len(encoded_smiles) > self.max_length:
-            # raise ValueError("SMILES String longer than defined max length.")
-            encoded_smiles = encoded_smiles[:512]
+        # Not needed as we now pad durign collation
+        # if len(encoded_smiles) <= self.max_length:
+        #     encoded_smiles.extend([self.padding_index] * (self.max_length - len(encoded_smiles)))
+        # elif len(encoded_smiles) > self.max_length:
+        #     # raise ValueError("SMILES String longer than defined max length.")
+        #     encoded_smiles = encoded_smiles[:512]
 
         return torch.tensor(encoded_smiles)
     
@@ -112,7 +118,7 @@ class CharSMILESChEMBLIndications(Dataset):
         return DataLoader(
             subset,
             batch_size = self.batch_size,
-            # collate_fn=self.collate_fn,
+            collate_fn=self.collate_fn,
             shuffle = train
         )
 
