@@ -7,7 +7,7 @@ import sys
 sys.path.append("..")
 
 from data.chembldb import ChemblDBIndications
-
+from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
 @attr.define
 class CharSMILESChEMBLIndications(Dataset):
@@ -34,6 +34,7 @@ class CharSMILESChEMBLIndications(Dataset):
 
     def __attrs_post_init__(self):
         self.all_smiles: list[str] = self.all_data[self.smiles_column_title].tolist()
+        self.lengths: list[int] =  [len(smiles_string) for smiles_string in self.all_smiles]
         self.characters: list[str] = list(set(''.join(self.all_smiles)))
         self.characters.extend([self.padding_char])
 
@@ -52,6 +53,11 @@ class CharSMILESChEMBLIndications(Dataset):
 
         # Encode all smiels strings and pad to appropriate length
         self.encoded_smiles = [self.encode_smiles_string(smiles_string) for smiles_string in self.all_smiles]
+        self.padded_smiles = torch.nn.utils.rnn.pad_sequence(
+            [torch.tensor(seq, dtype=torch.long) for seq in self.encoded_smiles],
+            batch_first=True,
+            padding_value=self.padding_index
+        ) 
 
         get_tensor = lambda x: torch.tensor(x.values.astype(float), dtype=torch.float32)
         self.indications_names = self.all_data.columns.drop(self.smiles_column_title).to_list()
@@ -68,8 +74,8 @@ class CharSMILESChEMBLIndications(Dataset):
 
         indications = self.indications_tensor[idx, :]
 
-        input_seq = self.encoded_smiles[idx][:-1]
-        target_seq = self.encoded_smiles[idx][1:]
+        input_seq = self.padded_smiles[idx][:-1]
+        target_seq = self.padded_smiles[idx][1:]
 
         target_seq = torch.tensor(target_seq, dtype=torch.long)
 
@@ -85,11 +91,12 @@ class CharSMILESChEMBLIndications(Dataset):
         Encodes a smiles string to a list of integers, pads to self.max_length with pad character.
         """
         encoded_smiles = [self.char_to_idx[c] for c in smiles]
-        if len(encoded_smiles) <= self.max_length:
-            encoded_smiles.extend([self.padding_index] * (self.max_length - len(encoded_smiles)))
-        elif len(encoded_smiles) > self.max_length:
-            # raise ValueError("SMILES String longer than defined max length.")
-            encoded_smiles = encoded_smiles[:512]
+
+        # if len(encoded_smiles) <= self.max_length:
+        #     encoded_smiles.extend([self.padding_index] * (self.max_length - len(encoded_smiles)))
+        # elif len(encoded_smiles) > self.max_length:
+        #     # raise ValueError("SMILES String longer than defined max length.")
+        #     encoded_smiles = encoded_smiles[:512]
 
         return encoded_smiles
     
