@@ -59,6 +59,7 @@ class CharSMILESChEMBLIndications(Dataset):
             padding_value=self.padding_index
         ) 
 
+        # ToDo: Clean up this mess
         get_tensor = lambda x: torch.tensor(x.values.astype(float), dtype=torch.float32)
         self.indications_names = self.all_data.columns.drop(self.smiles_column_title).to_list()
         self.indications_tensor = get_tensor(self.all_data.drop(columns=[self.smiles_column_title]))
@@ -77,12 +78,10 @@ class CharSMILESChEMBLIndications(Dataset):
         input_seq = self.padded_smiles[idx][:-1]
         target_seq = self.padded_smiles[idx][1:]
 
-        target_seq = torch.tensor(target_seq, dtype=torch.long)
-
         smiles_one_hot = torch.nn.functional.one_hot(
-            torch.tensor(input_seq), 
+            input_seq, 
             num_classes=len(self.characters)
-            ).float()
+        ).float()
         
         return smiles_one_hot, indications, target_seq
     

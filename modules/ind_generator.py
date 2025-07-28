@@ -58,26 +58,25 @@ class SmilesIndGeneratorRNN(nn.Module):
             tuple: (h_0, c_0) where each has shape (num_layers, batch_size, num_hiddens)
         """
         
+        input_tensor = ind_tensor.unsqueeze(0).repeat(self.num_layers, 1, 1)
+
         # Transform indication vector to initial hidden and cell states
-        h_0_flat = self.init_state_dropout(self.ind_to_h_0(ind_tensor))  # (batch_size, num_hiddens)
-        c_0_flat = self.init_state_dropout(self.ind_to_c_0(ind_tensor))  # (batch_size, num_hiddens)
+        h_0 = self.init_state_dropout(self.ind_to_h_0(input_tensor))  
+        c_0 = self.init_state_dropout(self.ind_to_c_0(input_tensor)) 
         
-        # Reshape to match LSTM expected format: (num_layers, batch_size, num_hiddens)
-        h_0 = h_0_flat.unsqueeze(0).repeat(self.num_layers, 1, 1)
-        c_0 = c_0_flat.unsqueeze(0).repeat(self.num_layers, 1, 1)
         
         return (h_0, c_0)
 
     def forward(self, seq_tensor: torch.Tensor, ind_tensor: Optional[torch.Tensor] = None, state=None):
         
-        # if not state and ind_tensor is not None:
-        #     # First, condition the state with indication tensor
-        #     initial_state = self.init_state(ind_tensor)
-        # else:
-        #     initial_state = state
+        if not state and ind_tensor is not None:
+            # First, condition the state with indication tensor
+            initial_state = self.init_state(ind_tensor)
+        else:
+            initial_state = state
         
-        # output, state = self.rnn(seq_tensor, initial_state)
-        output, _ = self.rnn(seq_tensor)
+        output, state = self.rnn(seq_tensor, initial_state)
+        # output, _ = self.rnn(seq_tensor)
         output = self.dropout(output)
         output = self.rnn_to_out(output)
         return output, state
