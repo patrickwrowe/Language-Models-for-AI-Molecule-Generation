@@ -2,6 +2,7 @@ import torch
 import attrs
 from torch import nn, optim
 from typing import Optional
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 @attrs.define(eq=False)
 class SmilesIndGeneratorRNN(nn.Module):
@@ -79,6 +80,7 @@ class SmilesIndGeneratorRNN(nn.Module):
         # output, _ = self.rnn(seq_tensor)
         output = self.dropout(output)
         output = self.rnn_to_out(output)
+
         return output, state
 
     def loss(self, y_hat, y):

@@ -7,7 +7,7 @@ import sys
 sys.path.append("..")
 
 from data.chembldb import ChemblDBIndications
-from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
+from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pad_sequence
 
 @attr.define
 class CharSMILESChEMBLIndications(Dataset):
@@ -34,7 +34,6 @@ class CharSMILESChEMBLIndications(Dataset):
 
     def __attrs_post_init__(self):
         self.all_smiles: list[str] = self.all_data[self.smiles_column_title].tolist()
-        self.lengths: list[int] =  [len(smiles_string) for smiles_string in self.all_smiles]
         self.characters: list[str] = list(set(''.join(self.all_smiles)))
         self.characters.extend([self.padding_char])
 
@@ -53,11 +52,6 @@ class CharSMILESChEMBLIndications(Dataset):
 
         # Encode all smiels strings and pad to appropriate length
         self.encoded_smiles = [self.encode_smiles_string(smiles_string) for smiles_string in self.all_smiles]
-        self.padded_smiles = torch.nn.utils.rnn.pad_sequence(
-            [torch.tensor(seq, dtype=torch.long) for seq in self.encoded_smiles],
-            batch_first=True,
-            padding_value=self.padding_index
-        ) 
 
         # ToDo: Clean up this mess
         get_tensor = lambda x: torch.tensor(x.values.astype(float), dtype=torch.float32)
@@ -75,8 +69,8 @@ class CharSMILESChEMBLIndications(Dataset):
 
         indications = self.indications_tensor[idx, :]
 
-        input_seq = self.padded_smiles[idx][:-1]
-        target_seq = self.padded_smiles[idx][1:]
+        input_seq = self.encoded_smiles[idx][:-1]
+        target_seq = self.encoded_smiles[idx][1:]
 
         smiles_one_hot = torch.nn.functional.one_hot(
             input_seq, 
@@ -85,19 +79,19 @@ class CharSMILESChEMBLIndications(Dataset):
         
         return smiles_one_hot, indications, target_seq
     
-    def encode_smiles_string(self, smiles: str) -> list[int]:
+    def encode_smiles_string(self, smiles: str) -> torch.Tensor:
         """
         Encodes a smiles string to a list of integers, pads to self.max_length with pad character.
         """
         encoded_smiles = [self.char_to_idx[c] for c in smiles]
 
-        # if len(encoded_smiles) <= self.max_length:
-        #     encoded_smiles.extend([self.padding_index] * (self.max_length - len(encoded_smiles)))
-        # elif len(encoded_smiles) > self.max_length:
-        #     # raise ValueError("SMILES String longer than defined max length.")
-        #     encoded_smiles = encoded_smiles[:512]
+        if len(encoded_smiles) <= self.max_length:
+            encoded_smiles.extend([self.padding_index] * (self.max_length - len(encoded_smiles)))
+        elif len(encoded_smiles) > self.max_length:
+            # raise ValueError("SMILES String longer than defined max length.")
+            encoded_smiles = encoded_smiles[:512]
 
-        return encoded_smiles
+        return torch.tensor(encoded_smiles)
     
     def get_indications_tensor(self, indication: str):
         indication_index = self.indications_names.index(indication)
@@ -118,8 +112,26 @@ class CharSMILESChEMBLIndications(Dataset):
         return DataLoader(
             subset,
             batch_size = self.batch_size,
+            # collate_fn=self.collate_fn,
             shuffle = train
         )
+
+    def collate_fn(self, batch):
+        """
+        Custom collate function to handle variable length sequences and pad them.
+        """
+        smiles, indications, targets = zip(*batch)
+
+        # Pad the SMILES sequences
+        smiles_padded = pad_sequence(smiles, batch_first=True, padding_value=self.padding_index)
+        
+        # Pad the target sequences
+        targets_padded = pad_sequence(targets, batch_first=True, padding_value=self.padding_index)
+
+        # Stack the indications
+        indications_stacked = torch.stack(indications)
+
+        return smiles_padded, indications_stacked, targets_padded
 
     def train_dataloader(self) -> DataLoader:
         return self.get_dataloader(train=True)
