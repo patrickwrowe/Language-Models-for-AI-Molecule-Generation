@@ -2,7 +2,6 @@ import torch
 import attrs
 from torch import nn, optim
 from typing import Optional
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 @attrs.define(eq=False)
 class SmilesIndGeneratorRNN(nn.Module):
@@ -69,7 +68,10 @@ class SmilesIndGeneratorRNN(nn.Module):
             tuple: (h_0, c_0) where each has shape (num_layers, batch_size, num_hiddens)
         """
         
-        input_tensor = ind_tensor.unsqueeze(0).repeat(self.num_layers, 1, 1)
+        # Temporarily cast back to ordinal encoding...
+        input_tensor = ind_tensor.argmax(dim=-1)
+
+        input_tensor = input_tensor.repeat(self.num_layers, 1).type(torch.long)
 
         # Transform indication vector to initial hidden and cell states
         # h_0 = self.init_state_dropout(self.ind_to_h_0(input_tensor))  
@@ -77,7 +79,7 @@ class SmilesIndGeneratorRNN(nn.Module):
         
         h_0 = self.in_emb_h0(input_tensor)
         c_0 = self.in_emb_h0(input_tensor)
-        
+
         return (h_0, c_0)
 
     def forward(self, seq_tensor: torch.Tensor, ind_tensor: Optional[torch.Tensor] = None, state=None):
