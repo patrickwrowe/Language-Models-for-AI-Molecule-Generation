@@ -132,4 +132,12 @@ class SmilesIndGeneratorRNN(nn.Module):
     def validation_step(self, batch):
         return self.training_step(batch)
 
+
+    def save_weights(self, path):
+        torch.save(self.state_dict(), path)
+
+    def load_weights(self, path):
+        self.load_state_dict(torch.load(path))
+        self.eval()
+
     
