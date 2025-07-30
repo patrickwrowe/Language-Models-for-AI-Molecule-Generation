@@ -47,6 +47,16 @@ class SmilesIndGeneratorRNN(nn.Module):
         
         self.dropout = nn.Dropout(self.output_dropout)
         self.init_state_dropout = nn.Dropout(self.state_dropout)
+        
+        self.in_emb_h0 = nn.Embedding(
+            num_embeddings=self.num_indications,
+            embedding_dim=self.num_hiddens
+        )
+
+        self.in_emb_h0 = nn.Embedding(
+            num_embeddings=self.num_indications,
+            embedding_dim=self.num_hiddens
+        )
 
     def init_state(self, ind_tensor: torch.Tensor):
         """
@@ -62,9 +72,11 @@ class SmilesIndGeneratorRNN(nn.Module):
         input_tensor = ind_tensor.unsqueeze(0).repeat(self.num_layers, 1, 1)
 
         # Transform indication vector to initial hidden and cell states
-        h_0 = self.init_state_dropout(self.ind_to_h_0(input_tensor))  
-        c_0 = self.init_state_dropout(self.ind_to_c_0(input_tensor)) 
+        # h_0 = self.init_state_dropout(self.ind_to_h_0(input_tensor))  
+        # c_0 = self.init_state_dropout(self.ind_to_c_0(input_tensor)) 
         
+        h_0 = self.in_emb_h0(input_tensor)
+        c_0 = self.in_emb_h0(input_tensor)
         
         return (h_0, c_0)
 
