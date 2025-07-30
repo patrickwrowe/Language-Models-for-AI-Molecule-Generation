@@ -77,8 +77,8 @@ class SmilesIndGeneratorRNN(nn.Module):
         # h_0 = self.init_state_dropout(self.ind_to_h_0(input_tensor))  
         # c_0 = self.init_state_dropout(self.ind_to_c_0(input_tensor)) 
         
-        h_0 = self.in_emb_h0(input_tensor)
-        c_0 = self.in_emb_h0(input_tensor)
+        h_0 = self.init_state_dropout(self.in_emb_h0(input_tensor))
+        c_0 = self.init_state_dropout(self.in_emb_h0(input_tensor))
 
         return (h_0, c_0)
 
