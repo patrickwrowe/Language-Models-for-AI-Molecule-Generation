@@ -4,23 +4,37 @@ from torch import nn, optim
 from typing import Optional
 import utilities
 
-@attrs.define(eq=False)
 class SmilesIndGeneratorRNN(nn.Module):
 
-    vocab_size: int
-    num_indications: int
-    num_hiddens: int
-    num_layers: int
+    def __init__(self, vocab_size: int, num_indications: int, num_hiddens: int, num_layers: int,
+                 learning_rate: float = 0.001, weight_decay: float = 0.01,
+                 output_dropout: float = 0.2, rnn_dropout: float = 0.2, state_dropout: float = 0.2):
+        """
+        Initialize the RNN model for SMILES generation with indications.
+        Args:
+            vocab_size (int): Size of the vocabulary.
+            num_indications (int): Number of indications.
+            num_hiddens (int): Number of hidden units in the RNN.
+            num_layers (int): Number of layers in the RNN.
+            learning_rate (float): Learning rate for the optimizer.
+            weight_decay (float): Weight decay for the optimizer.
+            output_dropout (float): Dropout rate for the output layer.
+            rnn_dropout (float): Dropout rate for the RNN layers.
+            state_dropout (float): Dropout rate for the initial state preparation.
+        """
+        super(SmilesIndGeneratorRNN, self).__init__()
+        
+        self.vocab_size: int
+        self.num_indications: int
+        self.num_hiddens: int
+        self.num_layers: int
 
-    learning_rate: float = 0.001
-    weight_decay: float = 0.01
+        self.learning_rate: float = 0.001
+        self.weight_decay: float = 0.01
 
-    output_dropout: float = 0.2
-    rnn_dropout: float = 0.2
-    state_dropout: float = 0.2
-
-    def __attrs_post_init__(self):
-        super().__init__()
+        self.output_dropout: float = 0.2
+        self.rnn_dropout: float = 0.2
+        self.state_dropout: float = 0.2
 
         # One hidden layer per state to prep
         self.ind_to_h_0 = nn.Linear(
