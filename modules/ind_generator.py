@@ -24,10 +24,10 @@ class SmilesIndGeneratorRNN(nn.Module):
         """
         super(SmilesIndGeneratorRNN, self).__init__()
         
-        self.vocab_size: int
-        self.num_indications: int
-        self.num_hiddens: int
-        self.num_layers: int
+        self.vocab_size: int = vocab_size
+        self.num_indications: int  = num_indications
+        self.num_hiddens: int = num_hiddens
+        self.num_layers: int = num_layers
 
         self.learning_rate: float = 0.001
         self.weight_decay: float = 0.01
