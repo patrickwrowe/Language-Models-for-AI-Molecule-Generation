@@ -3,8 +3,11 @@ import torch
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem import Draw
+import py3Dmol
 import os
 import datetime
+from typing import Optional
+
 
 def extract_training_losses(metadata: dict) -> dict:
     """
@@ -73,6 +76,61 @@ def draw_molecule(smiles: str):
     else:
         mol = Chem.MolFromSmiles(smiles)
         return Draw.MolToImage(mol)
+
+def draw_molecules_as_grid_from_smiles(canonical_smiles: list[str], names: Optional[list[str]], **kwargs):
+    """
+    Returns an image file with drawn representations of a list of SMILES strings in a grid format. 
+    """
+
+    if names: assert len(canonical_smiles) == len(names), f"Num smiles and names must match but got {len(canonical_smiles)} and {len(names)}"
+
+    # Determine number of rows/columns for grid of images.
+    root_num_smiles = np.sqrt(len(canonical_smiles))
+    if not np.isclose(root_num_smiles % 1, 0):
+        cols, rows = int(root_num_smiles), int(root_num_smiles) + 1
+        if rows + cols < len(canonical_smiles): rows += 1
+    else:
+        rows, cols = int(root_num_smiles), int(root_num_smiles)
+
+    print(f"{rows=}, {cols=}")
+
+    # Get mols from smiles strings
+    mols = []
+    for i, smiles in enumerate(canonical_smiles):
+        mols.append(Chem.MolFromSmiles(smiles))
+
+    # Pad with None for cases where not a square number to avoid IndexError
+    mols = mols + [None] * (cols * rows - len(canonical_smiles))
+    mols_grid = [[mols[i + j] for i in range(rows)] for j in range(0, cols * rows, rows)]
+
+    if names:
+        names = names + [""] * (cols * rows - len(canonical_smiles)) 
+        names_grid = [[names[i + j] for i in range(rows)] for j in range(0, cols * rows, rows)]
+    else: names_grid = None
+
+    return Draw.MolsMatrixToGridImage(mols_grid, legendsMatrix=names_grid, **kwargs)
+
+def visualise_3d_molecule_from_smiles(smiles_string: str):
+    """
+    Returns a 3D visualisation applet for a molecule from 
+    a smiles string.
+    """
+    # Get mol from smile, explicitly add H;'s
+    mol = Chem.MolFromSmiles(smiles_string)
+    mol = Chem.AddHs(mol)
+    AllChem.Compute2DCoords(mol)
+    params = AllChem.ETKDGv3()
+    params.randomSeed = 0xf00d
+    AllChem.EmbedMolecule(mol, params)
+    AllChem.MMFFOptimizeMolecule(mol)
+
+    view = py3Dmol.view(
+        data=Chem.MolToMolBlock(mol),  # Convert the RDKit molecule for py3Dmol
+        style={"stick": {}, "sphere": {"scale": 0.3}}
+        )
+    view.zoomTo()
+
+    return view
 
 def save_model_weights(prefix, model, data):
     if not os.path.exists(os.path.join("../", "models")):

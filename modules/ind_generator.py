@@ -138,7 +138,10 @@ class SmilesIndGeneratorRNN(nn.Module):
         torch.save(self.state_dict(), path)
 
     def load_weights(self, path):
-        self.load_state_dict(torch.load(path))
+        self.load_state_dict(torch.load(
+            path,
+            weights_only=True
+        ))
         self.eval()
 
     
