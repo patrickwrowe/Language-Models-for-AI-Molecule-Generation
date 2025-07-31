@@ -4,29 +4,7 @@ from rdkit.Chem.Fingerprints import FingerprintMols
 from rdkit.Chem import rdFingerprintGenerator
 import numpy as np
 
-# def compute_similarity_matrix(smiles_list: list[str]):
-#     mols = [Chem.MolFromSmiles(smiles) for smiles in smiles_list]
-
-#     print("plink")
-
-#     if None in mols:
-#         print("Warning, None found in Mols. Probably due to invalid SMILES. Skipping")
-#         mols = [mol for mol in mols if mol]
-    
-#     fps = [FingerprintMols.FingerprintMol(mol) for mol in mols]
-
-#     similarity_matrix = []
-#     for fp in fps:
-#         similarities = DataStructs.BulkTanimotoSimilarity(fp, fps)
-#         similarity_matrix.append(similarities)
-
-#     return similarity_matrix
-
-#     # return DataStructs.GetTanimotoSimMat(
-#     #     fps
-#     # )
-
-
+import umap
 
 def compute_similarity_matrix_2(smiles_list: list[str]):
     # Filter out None values from the input list
@@ -42,3 +20,20 @@ def compute_similarity_matrix_2(smiles_list: list[str]):
     similarities = np.array([DataStructs.BulkTanimotoSimilarity(fp, fps) for fp in fps])
 
     return similarities
+
+def fit_umap(smiles_list: list[str], n_neighbors: int = 15, min_dist: float = 0.1, tanimoto: bool = True, **kwargs):
+    
+    if tanimoto:
+        # Compute the similarity matrix
+        similarity_matrix = compute_similarity_matrix_2(smiles_list)
+        
+        # Apply UMAP to the similarity matrix
+        umap_model = umap.UMAP(n_neighbors=n_neighbors, min_dist=min_dist, **kwargs)
+        embedding = umap_model.fit_transform(1 - similarity_matrix)
+    else:
+        # Compute the UMAP embedding directly from the SMILES strings
+        umap_model = umap.UMAP(n_neighbors=n_neighbors, min_dist=min_dist, **kwargs)
+        embedding = umap_model.fit_transform(smiles_list)
+
+    return embedding, umap_model
+       
