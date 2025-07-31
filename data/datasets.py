@@ -37,7 +37,7 @@ class CharSMILESChEMBLIndications(Dataset):
         self.all_smiles: list[str] = self.all_data[self.smiles_column_title].tolist()
 
         self.all_smiles = [smiles + self.end_char for smiles in self.all_smiles]  # Add end character to each SMILES string or molecules never end
-        self.characters: list[str] = list(set(''.join(self.all_smiles)))
+        self.characters: list[str] = sorted(list(set(''.join(self.all_smiles))))
         self.characters.extend([
             self.padding_char
         ])
