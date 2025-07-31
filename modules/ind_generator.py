@@ -29,12 +29,12 @@ class SmilesIndGeneratorRNN(nn.Module):
         self.num_hiddens: int = num_hiddens
         self.num_layers: int = num_layers
 
-        self.learning_rate: float = 0.001
-        self.weight_decay: float = 0.01
+        self.learning_rate: float = learning_rate
+        self.weight_decay: float = weight_decay
 
-        self.output_dropout: float = 0.2
-        self.rnn_dropout: float = 0.2
-        self.state_dropout: float = 0.2
+        self.output_dropout: float = output_dropout
+        self.rnn_dropout: float = rnn_dropout
+        self.state_dropout: float = state_dropout
 
         # One hidden layer per state to prep
         self.ind_to_h_0 = nn.Linear(
