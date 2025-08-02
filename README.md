@@ -58,14 +58,10 @@ for i in range(20):
 
 
 ```python
-display(Markdown(f"# Generated {n_valid} valid caffiene-like molecules and {n_invalid} invalid SMILES strings out of 20 attempts."))
 display(Markdown("## Generated Molecules"))
 for img in images:
     display(img)
 ```
-
-
-## Generated 10 valid caffeine-like molecules and 10 invalid SMILES strings out of 20 attempts.
 
 Here is the structure of caffeiene for reference:
 
