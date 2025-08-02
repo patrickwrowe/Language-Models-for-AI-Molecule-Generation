@@ -73,7 +73,7 @@ Here is the structure of caffeiene for reference:
 
 Below, we can see examples of some of the caffeine-like molecules generated with our model. The model has learned to generate molecules which are structurally similar to caffeine, but with variations in the side chains and functional groups. Some of these molecules are quite complex, with multiple rings and functional groups, while others are simpler. 
 
-## Sample of Generated Molecules
+## Sample of Generated Molecules. Note substructure similarity to caffiene.
    
 ![png](readme_img/character_level_rnn_generator_16_2.png)
 ![png](readme_img/character_level_rnn_generator_16_3.png)
