@@ -8,6 +8,7 @@ sys.path.append("..")
 
 from data.chembldb import ChemblDBIndications
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pad_sequence
+from vocab import character
 
 @attr.define
 class CharSMILESChEMBLIndications(Dataset):
@@ -23,40 +24,46 @@ class CharSMILESChEMBLIndications(Dataset):
     batch_size: int = 64
     frac_train: float = 0.8
 
-    char_to_idx: dict[str, int] = attr.field(init=False)
-    idx_to_char: dict[int, str] = attr.field(init=False)
+    # char_to_idx: dict[str, int] = attr.field(init=False)
+    # idx_to_char: dict[int, str] = attr.field(init=False)
 
-    # account for padding, to be more cleanly handled with tokenizers
-    padding_index = 0
-    padding_char = " "  
-    end_char = "£"
+    # # account for padding, to be more cleanly handled with tokenizers
+    # padding_index = 0
+    # padding_char = " "  
+    # end_char = "£"
 
     smiles_column_title = "canonical_smiles"
 
     def __attrs_post_init__(self):
         self.all_smiles: list[str] = self.all_data[self.smiles_column_title].tolist()
-
-        self.all_smiles = [smiles + self.end_char for smiles in self.all_smiles]  # Add end character to each SMILES string or molecules never end
         self.characters: list[str] = sorted(list(set(''.join(self.all_smiles))))
-        self.characters.extend([
-            self.padding_char
-        ])
+        
+        self.vocab = character.CharacterVocab(characters=self.characters)
+
+        # Add beginning/end character to each SMILES string or molecules never end
+        self.all_smiles = [
+            self.vocab.bos.char 
+            + smiles 
+            + self.vocab.eos.char 
+            for smiles in self.all_smiles
+        ]  
+
 
         # This will only make sense if padding index is 0
         # This class is soon to be superceded with a variant using proper tokenizers 
         # So I won't worry about writing better logic to handle different padding styles
-        assert self.padding_index == 0
+        # assert self.padding_index == 0
 
-        # Create char to index mappings, RESERVE index 0 for padding
-        self.char_to_idx = {c: inx + 1 for inx, c in enumerate(self.characters)}
-        self.idx_to_char = {inx + 1: c for inx, c in enumerate(self.characters)}
+        # # Create char to index mappings, RESERVE index 0 for padding
+        # self.char_to_idx = {c: inx + 1 for inx, c in enumerate(self.characters)}
+        # self.idx_to_char = {inx + 1: c for inx, c in enumerate(self.characters)}
         
-        # padding characters
-        self.char_to_idx[self.padding_char] = self.padding_index
-        self.idx_to_char[self.padding_index] = self.padding_char
+        # # padding characters
+        # self.char_to_idx[self.padding_char] = self.padding_index
+        # self.idx_to_char[self.padding_index] = self.padding_char
 
         # Encode all smiels strings and pad to appropriate length
-        self.encoded_smiles = [self.encode_smiles_string(smiles_string) for smiles_string in self.all_smiles]
+        self.encoded_smiles = [torch.tensor(self.vocab.encode_text(smiles_string)) for smiles_string in self.all_smiles]
 
         # ToDo: Clean up this mess
         get_tensor = lambda x: torch.tensor(x.values.astype(float), dtype=torch.float32)
@@ -64,7 +71,7 @@ class CharSMILESChEMBLIndications(Dataset):
         self.indications_tensor = get_tensor(self.all_data.drop(columns=[self.smiles_column_title]))
         
         # Shortcuts for sizes
-        self.vocab_size = len(self.char_to_idx)
+        # self.vocab_size = len(self.char_to_idx)
         self.num_indications = self.indications_tensor.shape[-1]
 
     def __len__(self) -> int:
@@ -84,20 +91,20 @@ class CharSMILESChEMBLIndications(Dataset):
         
         return smiles_one_hot, indications, target_seq
     
-    def encode_smiles_string(self, smiles: str) -> torch.Tensor:
-        """
-        Encodes a smiles string to a list of integers, pads to self.max_length with pad character.
-        """
-        encoded_smiles = [self.char_to_idx[c] for c in smiles]
+    # def encode_smiles_string(self, smiles: str) -> torch.Tensor:
+    #     """
+    #     Encodes a smiles string to a list of integers, pads to self.max_length with pad character.
+    #     """
+    #     encoded_smiles = [self.char_to_idx[c] for c in smiles]
 
-        # Not needed as we now pad durign collation
-        # if len(encoded_smiles) <= self.max_length:
-        #     encoded_smiles.extend([self.padding_index] * (self.max_length - len(encoded_smiles)))
-        # elif len(encoded_smiles) > self.max_length:
-        #     # raise ValueError("SMILES String longer than defined max length.")
-        #     encoded_smiles = encoded_smiles[:512]
+    #     # Not needed as we now pad durign collation
+    #     # if len(encoded_smiles) <= self.max_length:
+    #     #     encoded_smiles.extend([self.padding_index] * (self.max_length - len(encoded_smiles)))
+    #     # elif len(encoded_smiles) > self.max_length:
+    #     #     # raise ValueError("SMILES String longer than defined max length.")
+    #     #     encoded_smiles = encoded_smiles[:512]
 
-        return torch.tensor(encoded_smiles)
+    #     return torch.tensor(encoded_smiles)
     
     def get_indications_tensor(self, indication: str):
         indication_index = self.indications_names.index(indication)
@@ -128,11 +135,15 @@ class CharSMILESChEMBLIndications(Dataset):
         """
         smiles, indications, targets = zip(*batch)
 
+        # Quieten type errors
+        assert isinstance(smiles, torch.Tensor)
+        assert isinstance(targets, torch.Tensor)
+
         # Pad the SMILES sequences
-        smiles_padded = pad_sequence(smiles, batch_first=True, padding_value=self.padding_index)
+        smiles_padded = pad_sequence(smiles, batch_first=True, padding_value=self.vocab.pad.token)
         
         # Pad the target sequences
-        targets_padded = pad_sequence(targets, batch_first=True, padding_value=self.padding_index)
+        targets_padded = pad_sequence(targets, batch_first=True, padding_value=self.vocab.pad.token)
 
         # Stack the indications
         indications_stacked = torch.stack(indications)
