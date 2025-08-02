@@ -84,8 +84,8 @@ class Trainer:
             self.fit_epoch()
         self.metadata["end_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    def maybe_batch_to_gpu(self, batch):
-        batch = [b.to(try_gpu()) for b in batch]
+    def maybe_batch_to_gpu(self, batch) -> tuple[torch.Tensor, ...]:
+        batch = tuple([b.to(try_gpu()) for b in batch])
         return batch
 
     def fit_epoch(self):
@@ -109,10 +109,6 @@ class Trainer:
             self.optim.zero_grad()
 
             # the model implements a method which computes the loss on a particular batch
-            # print(len(batch)) # expect 2
-            # print(batch[0].shape)
-            # print(batch[1].shape)
-            # exit()
             loss = self.model.training_step(batch)
             
             # loss.backward computes the gradients fo rhthe step using analytical gradients

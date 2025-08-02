@@ -1,28 +1,23 @@
 import torch
-import attrs
-from torch import nn, optim
-from typing import Optional
+from torch import nn
+from typing import Union
+from modules import SmilesGenerativeLanguageModel
 import utilities
 
-class SmilesIndGeneratorRNN(nn.Module):
+class SmilesIndGeneratorRNN(SmilesGenerativeLanguageModel):
 
     def __init__(self, vocab_size: int, num_indications: int, num_hiddens: int, num_layers: int,
                  learning_rate: float = 0.001, weight_decay: float = 0.01,
                  output_dropout: float = 0.2, rnn_dropout: float = 0.2, state_dropout: float = 0.2):
         """
-        Initialize the RNN model for SMILES generation with indications.
-        Args:
-            vocab_size (int): Size of the vocabulary.
-            num_indications (int): Number of indications.
-            num_hiddens (int): Number of hidden units in the RNN.
-            num_layers (int): Number of layers in the RNN.
-            learning_rate (float): Learning rate for the optimizer.
-            weight_decay (float): Weight decay for the optimizer.
-            output_dropout (float): Dropout rate for the output layer.
-            rnn_dropout (float): Dropout rate for the RNN layers.
-            state_dropout (float): Dropout rate for the initial state preparation.
+        Recurrent architecture with initial condition set by embedding of
+        indication for which the drug molecule is intended.
         """
-        super(SmilesIndGeneratorRNN, self).__init__()
+        super().__init__(
+            vocab_size=vocab_size,
+            learning_rate=learning_rate,
+            weight_decay=weight_decay,
+        )
         
         self.vocab_size: int = vocab_size
         self.num_indications: int  = num_indications
@@ -72,7 +67,9 @@ class SmilesIndGeneratorRNN(nn.Module):
             embedding_dim=self.num_hiddens
         )
 
-    def init_state(self, ind_tensor: torch.Tensor):
+        self.initialize_parameters(self)
+
+    def init_state(self, input: Union[torch.Tensor, tuple[torch.Tensor, ...]]) -> tuple[torch.Tensor, ...]:
         """
         Initialize LSTM hidden and cell states from indication tensor.
         
@@ -83,77 +80,46 @@ class SmilesIndGeneratorRNN(nn.Module):
             tuple: (h_0, c_0) where each has shape (num_layers, batch_size, num_hiddens)
         """
         
+        if isinstance(input, tuple):
+            if len(input) == 1:
+                input = input[0]
+            else:
+                raise ValueError(f"Expected exactly one tensor as input, got {len(input)}.")
+
         # Temporarily cast back to ordinal encoding...
-        input_tensor = ind_tensor.argmax(dim=-1)
+        input_tensor = input.argmax(dim=-1)
 
         input_tensor = input_tensor.repeat(self.num_layers, 1).type(torch.long)
 
-        # Transform indication vector to initial hidden and cell states
-        # h_0 = self.init_state_dropout(self.ind_to_h_0(input_tensor))  
-        # c_0 = self.init_state_dropout(self.ind_to_c_0(input_tensor)) 
-        
+        # Transform indication vector to initial hidden and cell states 
         h_0 = self.init_state_dropout(self.in_emb_h0(input_tensor))
         c_0 = self.init_state_dropout(self.in_emb_h0(input_tensor))
 
         return (h_0, c_0)
 
-    def forward(self, seq_tensor: torch.Tensor, ind_tensor: Optional[torch.Tensor] = None, state=None):
+    def forward(self, input: Union[torch.Tensor, tuple[torch.Tensor, ...]], state=None):
         
-        if not state and ind_tensor is not None:
+        if isinstance(input, torch.Tensor):
+            seq_tensor = input
+            ind_tensor = None
+        elif isinstance(input, tuple):
+            # Expect exactly 2 tensors for this specific implementation
+            if len(input) != 2:
+                raise ValueError(f"Expected exactly 2 tensors (seq_tensor, ind_tensor), got {len(input)}")
+            seq_tensor, ind_tensor = input
+        else: raise ValueError(f"Expected type torch.Tensor or tuple[torch.Tensor], got {type(input)}")
+
+        if state is None and ind_tensor is not None:
             # First, condition the state with indication tensor
             initial_state = self.init_state(ind_tensor)
         else:
             initial_state = state
         
         output, state = self.rnn(seq_tensor, initial_state)
-        # output, _ = self.rnn(seq_tensor)
         output = self.dropout(output)
         output = self.rnn_to_out(output)
 
         return output, state
-
-    def loss(self, y_hat, y):
-        loss_function = nn.CrossEntropyLoss(ignore_index=0)  
-        return loss_function(y_hat, y)
-
-    def initialize_parameters(self, module):
-
-        def initialize_xavier(layer):
-            if type(layer) == nn.Linear:
-                nn.init.xavier_normal_(layer.weight)
-                nn.init.zeros_(layer.bias)
-            elif type(layer) == nn.RNN:
-                for name, param in layer.named_parameters():
-                    if 'weight' in name:
-                        nn.init.xavier_normal_(param)
-                    elif 'bias' in name:
-                        nn.init.zeros_(param)
-
-        module.apply(initialize_xavier)
-
-    def configure_optimizers(self):
-        return optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
-
-    def training_step(self, batch):
-        preds, _ = self(*batch[:-1])
-        labels = batch[-1]
-        
-        # Flatten for cross-entropy loss
-        preds = preds.reshape(-1, self.vocab_size)
-        labels = labels.reshape(-1)
-        
-        return self.loss(preds, labels)
-
-    def validation_step(self, batch):
-        return self.training_step(batch)
-
-    def save_weights(self, path: str):
-        torch.save(self.state_dict(), path)
-
-    def load_weights(self, path: str):
-        self.load_state_dict(torch.load(path))
-        self.eval()
-
     
 
 # Model Sampling

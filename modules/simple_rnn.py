@@ -1,81 +1,42 @@
 import torch
 import attrs
-from torch import nn, optim
+from torch import nn
+from typing import Optional, Union
+from modules import SmilesGenerativeLanguageModel
 
-
+# NOTE: Due to a bug, models defined as attrs classes can't be loaded
+# From weights. Leaving this class here as-is for posterity.
 @attrs.define(eq=False)
-class simpleRNN(nn.Module):
+class simpleRNN(SmilesGenerativeLanguageModel):
 
     num_hiddens: int 
-    vocab_size: int
     num_layers: int = 1
-
-    learning_rate: float = 0.1
-    weight_decay: float = 0.01
     output_dropout: float = 0.2
     rnn_dropout: float = 0.2
 
     def __attrs_post_init__(self):
-        super().__init__()
+        super().__init__(
+            vocab_size=self.vocab_size,
+            learning_rate=self.learning_rate,
+            weight_decay=self.weight_decay
+        )
         self.linear = nn.Linear(self.num_hiddens, self.vocab_size)
-        self.rnn = nn.RNN(self.vocab_size, self.num_hiddens, num_layers = self.num_layers, batch_first=True, 
+        self.rnn = nn.RNN(self.vocab_size, self.num_hiddens, num_layers=self.num_layers, batch_first=True, 
                           dropout=self.rnn_dropout, nonlinearity='relu')
         self.dropout = nn.Dropout(self.output_dropout)
         self.initialize_parameters(self)
 
-    def forward(self, inputs, state=None):
-        output, _ = self.rnn(inputs, state)
+    def forward(self, input: Union[torch.Tensor, tuple[torch.Tensor, ...]], state: Optional[torch.Tensor] = None) -> tuple[torch.Tensor, torch.Tensor]:
+        # Handle tuple input by taking first element (for compatibility)
+        if isinstance(input, tuple):
+            inputs = input[0]
+        else:
+            inputs = input
+            
+        output, new_state = self.rnn(inputs, state)
         output = self.dropout(output)
         output = self.linear(output)
-        return output
-
-    def loss(self, y_hat, y):
-        loss_function = nn.CrossEntropyLoss()
-        return loss_function(y_hat, y)
-
-    def initialize_parameters(self, module):
-
-        def initialize_xavier(layer):
-            if type(layer) == nn.Linear:
-                nn.init.xavier_normal_(layer.weight)
-                nn.init.zeros_(layer.bias)
-            elif type(layer) == nn.RNN:
-                for name, param in layer.named_parameters():
-                    if 'weight' in name:
-                        nn.init.xavier_normal_(param)
-                    elif 'bias' in name:
-                        nn.init.zeros_(param)
-
-        module.apply(initialize_xavier)
-
-    def configure_optimizers(self):
-        return optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
-
-    def training_step(self, batch):
-        # print(batch[0].shape)  # Debugging: Check input shape]
-        # print(batch[1].shape)  # Debugging: Check target shape
-        preds = self(*batch[:-1])
-        labels = batch[-1]
-        
-        # Flatten for cross-entropy loss
-        # preds: (batch_size, seq_len, vocab_size) -> (batch_size * seq_len, vocab_size)
-        # labels: (batch_size, seq_len) -> (batch_size * seq_len)
-        preds = preds.reshape(-1, self.vocab_size)
-        labels = labels.reshape(-1)
-        
-        return self.loss(preds, labels)
-
-    def validation_step(self, batch):
-        # These don't need to be different for this model
-        return self.training_step(batch)
-
-    def save_weights(self, path):
-        torch.save(self.state_dict(), path)
-
-    def load_weights(self, path):
-        self.load_state_dict(torch.load(path))
-        self.eval()
-
+        return output, new_state
     
 
 @attrs.define(eq=False)
