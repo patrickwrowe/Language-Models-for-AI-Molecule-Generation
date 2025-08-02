@@ -12,8 +12,8 @@ class Trainer:
 
     # training options
     max_epochs: int
-    init_random: Optional[int] = None
-    clip_grads_norm: float = 1.0
+    init_random: Optional[int] = attrs.field(init=False)
+    clip_grads_norm: float = attrs.field(default=1.0)
 
     # model params
     model: Module = attrs.field(init=False)
@@ -39,6 +39,7 @@ class Trainer:
             torch.manual_seed(self.init_random)
             
             # Use of deterministic algorithms not supported at the moment
+            # Due to CUDA incompatibility with RNNs.
             # torch.use_deterministic_algorithms(True)
 
     def prepare_data(self, data):

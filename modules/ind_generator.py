@@ -7,9 +7,9 @@ import attrs
 
 @attrs.define(frozen=True)
 class SmilesIndGeneratorRNNConfig(SmilesGLMConfig):
-    num_indications: int = attrs.field()
-    num_hiddens: int = attrs.field()
-    num_layers: int = attrs.field()
+    num_indications: int = attrs.field(validator=attrs.validators.ge(1))
+    num_hiddens: int = attrs.field(validator=attrs.validators.ge(1))
+    num_layers: int = attrs.field(validator=attrs.validators.ge(1))
     output_dropout: float = attrs.field()
     rnn_dropout: float = attrs.field()
     state_dropout: float = attrs.field()
