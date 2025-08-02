@@ -1,70 +1,67 @@
 import torch
 from torch import nn
 from typing import Union
-from modules import SmilesGenerativeLanguageModel
+from modules import SmilesGenerativeLanguageModel, SmilesGLMConfig
 import utilities
+import attrs
+
+@attrs.define(frozen=True)
+class SmilesIndGeneratorRNNConfig(SmilesGLMConfig):
+    num_indications: int = attrs.field()
+    num_hiddens: int = attrs.field()
+    num_layers: int = attrs.field()
+    output_dropout: float = attrs.field()
+    rnn_dropout: float = attrs.field()
+    state_dropout: float = attrs.field()
+
 
 class SmilesIndGeneratorRNN(SmilesGenerativeLanguageModel):
 
-    def __init__(self, vocab_size: int, num_indications: int, num_hiddens: int, num_layers: int,
-                 learning_rate: float = 0.001, weight_decay: float = 0.01,
-                 output_dropout: float = 0.2, rnn_dropout: float = 0.2, state_dropout: float = 0.2):
+    def __init__(self, config: SmilesIndGeneratorRNNConfig):
         """
         Recurrent architecture with initial condition set by embedding of
         indication for which the drug molecule is intended.
         """
         super().__init__(
-            vocab_size=vocab_size,
-            learning_rate=learning_rate,
-            weight_decay=weight_decay,
+            config=config
         )
         
-        self.vocab_size: int = vocab_size
-        self.num_indications: int  = num_indications
-        self.num_hiddens: int = num_hiddens
-        self.num_layers: int = num_layers
-
-        self.learning_rate: float = learning_rate
-        self.weight_decay: float = weight_decay
-
-        self.output_dropout: float = output_dropout
-        self.rnn_dropout: float = rnn_dropout
-        self.state_dropout: float = state_dropout
+        self.config = config
 
         # One hidden layer per state to prep
         self.ind_to_h_0 = nn.Linear(
-            in_features=self.num_indications, 
-            out_features=self.num_hiddens
+            in_features=self.config.num_indications, 
+            out_features=self.config.num_hiddens
         )
 
         self.ind_to_c_0 = nn.Linear(
-            in_features=self.num_indications, 
-            out_features=self.num_hiddens
+            in_features=self.config.num_indications, 
+            out_features=self.config.num_hiddens
         )
 
         self.rnn_to_out = nn.Linear(
-            self.num_hiddens, self.vocab_size
+            self.config.num_hiddens, self.config.vocab_size
         )
 
         self.rnn = nn.LSTM(
-            self.vocab_size,
-            self.num_hiddens,
-            num_layers = self.num_layers,
+            self.config.vocab_size,
+            self.config.num_hiddens,
+            num_layers = self.config.num_layers,
             batch_first = True,
-            dropout=self.rnn_dropout
+            dropout=self.config.rnn_dropout
         )
         
-        self.dropout = nn.Dropout(self.output_dropout)
-        self.init_state_dropout = nn.Dropout(self.state_dropout)
+        self.dropout = nn.Dropout(self.config.output_dropout)
+        self.init_state_dropout = nn.Dropout(self.config.state_dropout)
         
         self.in_emb_h0 = nn.Embedding(
-            num_embeddings=self.num_indications,
-            embedding_dim=self.num_hiddens
+            num_embeddings=self.config.num_indications,
+            embedding_dim=self.config.num_hiddens
         )
 
         self.in_emb_h0 = nn.Embedding(
-            num_embeddings=self.num_indications,
-            embedding_dim=self.num_hiddens
+            num_embeddings=self.config.num_indications,
+            embedding_dim=self.config.num_hiddens
         )
 
         self.initialize_parameters(self)
@@ -89,7 +86,7 @@ class SmilesIndGeneratorRNN(SmilesGenerativeLanguageModel):
         # Temporarily cast back to ordinal encoding...
         input_tensor = input.argmax(dim=-1)
 
-        input_tensor = input_tensor.repeat(self.num_layers, 1).type(torch.long)
+        input_tensor = input_tensor.repeat(self.config.num_layers, 1).type(torch.long)
 
         # Transform indication vector to initial hidden and cell states 
         h_0 = self.init_state_dropout(self.in_emb_h0(input_tensor))

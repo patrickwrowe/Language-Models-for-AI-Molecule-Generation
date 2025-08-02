@@ -2,31 +2,34 @@ import torch
 import attrs
 from torch import nn
 from typing import Optional, Union
-from modules import SmilesGenerativeLanguageModel
+from modules import SmilesGenerativeLanguageModel, SmilesGLMConfig
 
 # NOTE: Due to a bug, models defined as attrs classes can't be loaded from weights. 
 
 # NOTE: Model was used as a stepping stone for more functional model and should not be used.
 # Leaving this it here as-is for posterity and reference.
 
+@attrs.define(frozen=True)
+class simpleRNNConfig(SmilesGLMConfig):
+    num_hiddens: int = attrs.field()
+    num_layers: int = attrs.field(default=1)
+    output_dropout: float = attrs.field(default=0.2)
+    rnn_dropout: float = attrs.field(default=0.2)
+
 @attrs.define(eq=False)
 class simpleRNN(SmilesGenerativeLanguageModel):
 
-    num_hiddens: int 
-    num_layers: int = 1
-    output_dropout: float = 0.2
-    rnn_dropout: float = 0.2
+    config: simpleRNNConfig
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self, ):
         super().__init__(
-            vocab_size=self.vocab_size,
-            learning_rate=self.learning_rate,
-            weight_decay=self.weight_decay
+            config=self.config
         )
-        self.linear = nn.Linear(self.num_hiddens, self.vocab_size)
+
+        self.linear = nn.Linear(self.config.num_hiddens, self.config.vocab_size)
         self.rnn = nn.RNN(self.vocab_size, self.num_hiddens, num_layers=self.num_layers, batch_first=True, 
-                          dropout=self.rnn_dropout, nonlinearity='relu')
-        self.dropout = nn.Dropout(self.output_dropout)
+                          dropout=self.config.rnn_dropout, nonlinearity='relu')
+        self.dropout = nn.Dropout(self.config.output_dropout)
         self.initialize_parameters(self)
 
     def forward(self, input: Union[torch.Tensor, tuple[torch.Tensor, ...]], state: Optional[torch.Tensor] = None) -> tuple[torch.Tensor, torch.Tensor]:
@@ -44,8 +47,6 @@ class simpleRNN(SmilesGenerativeLanguageModel):
 
 @attrs.define(eq=False)
 class simpleLSTM(simpleRNN):
-    num_hiddens: int = attrs.field(default=100)
-    num_layers: int = attrs.field(default=1)
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
