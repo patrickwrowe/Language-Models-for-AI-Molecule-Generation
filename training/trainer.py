@@ -12,7 +12,7 @@ class Trainer:
 
     # training options
     max_epochs: int
-    init_random: Optional[int] = attrs.field()
+    init_random: Optional[int] = attrs.field(default=42)
     clip_grads_norm: float = attrs.field(default=1.0)
 
     # model params

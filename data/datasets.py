@@ -98,10 +98,10 @@ class CharSMILESChEMBLIndications(Dataset):
         smiles, indications, targets = zip(*batch)
 
         # Pad the SMILES sequences
-        smiles_padded = pad_sequence(list(smiles), batch_first=True, padding_value=self.vocab.pad.token)
+        smiles_padded = pad_sequence(smiles, batch_first=True, padding_value=self.vocab.pad.token)
         
         # Pad the target sequences
-        targets_padded = pad_sequence(list(targets), batch_first=True, padding_value=self.vocab.pad.token)
+        targets_padded = pad_sequence(targets, batch_first=True, padding_value=self.vocab.pad.token)
 
         # Stack the indications
         indications_stacked = torch.stack(indications)
