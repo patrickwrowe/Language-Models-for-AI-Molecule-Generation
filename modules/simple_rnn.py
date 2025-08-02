@@ -4,8 +4,11 @@ from torch import nn
 from typing import Optional, Union
 from modules import SmilesGenerativeLanguageModel
 
-# NOTE: Due to a bug, models defined as attrs classes can't be loaded
-# From weights. Leaving this class here as-is for posterity.
+# NOTE: Due to a bug, models defined as attrs classes can't be loaded from weights. 
+
+# NOTE: Model was used as a stepping stone for more functional model and should not be used.
+# Leaving this it here as-is for posterity and reference.
+
 @attrs.define(eq=False)
 class simpleRNN(SmilesGenerativeLanguageModel):
 
