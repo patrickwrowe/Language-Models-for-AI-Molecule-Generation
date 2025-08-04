@@ -6,8 +6,10 @@ from rdkit.Chem import AllChem
 import py3Dmol
 import os
 import datetime
-from typing import Optional
+from typing import Optional, Union
 
+from modules import SmilesGenerativeLanguageModel
+from vocab import Vocab
 
 def extract_training_losses(metadata: dict) -> dict:
     """
@@ -146,87 +148,79 @@ def save_model_weights(prefix, model, data):
     
 # Model Sampling
 
-def simple_generate(prefix: str, num_chars, model, indications_tensor, char_to_idx_mapping, idx_to_char_mapping, temperature = 0.0, device=None):
+def simple_generate(
+        prefix: str, 
+        model: SmilesGenerativeLanguageModel, 
+        vocab: Vocab, 
+        init_state_tensor: Union[torch.Tensor, tuple[torch.Tensor, ...]],  
+        temperature: float = 0.0, 
+        max_generate: int = 1024, 
+        device: str = "cuda"
+    ):
     """
     Simple character-by-character generation function.
     """
 
-    def decode_indices_to_string(encoded_indices: list, idx_to_char_mapping: dict[int, str]):
-        decoded = ''.join([idx_to_char_mapping[int(inx)] for inx in encoded_indices])
-        return decoded
-
-    def encode_string_to_indices(smiles_string: str, char_to_idx_mapping: dict[str, int]):
-        encoded = [char_to_idx_mapping[c] for c in smiles_string]
-        return encoded
+    def _get_one_hot(encoded: list[int]):
+        return torch.nn.functional.one_hot(
+            torch.tensor(encoded), 
+            num_classes=len(vocab)
+            ).float().to(device)
 
     model.eval()
+
+    # Generated text should begin with prefix
     generated = prefix
     
     with torch.no_grad():
-        # Initialize state with indications
-        state = model.init_state(indications_tensor.unsqueeze(0).to(device))  # Add batch dim
 
-        # First, process the prefix to get the proper state
+        # Initialize state with tensor
+        state = model.init_state(init_state_tensor)  # Add batch dim
+
+        # Warmup: process the prefix to get the proper state
         if len(prefix) > 0:
-            prefix_encoded = encode_string_to_indices(prefix, char_to_idx_mapping)
-            prefix_tensor = torch.nn.functional.one_hot(
-                torch.tensor(prefix_encoded), 
-                num_classes=len(char_to_idx_mapping)
-            ).float().to(device)
-            
-            # Process prefix through model to get proper state
+            prefix_encoded = vocab.encode_text(prefix)
+            prefix_tensor = _get_one_hot(prefix_encoded)
             _, state = model(prefix_tensor.unsqueeze(0), state=state)
         
         # Now generate new characters one by one
-        for i in range(num_chars - len(prefix)):
-            # For generation, we need to feed the last character (or a dummy if this is the first step)
+        for i in range(max_generate - len(prefix)):
             if len(generated) > 0:
                 last_char = generated[-1]
-                last_char_idx = char_to_idx_mapping[last_char]
+                last_char_idx = vocab.encode_text(last_char)
             else:
-                # If no prefix, start with some default (this shouldn't happen with your use case)
-                last_char_idx = 0
+                # Revert to "beginnin of sequence"
+                last_char_idx = [vocab.bos.token]
             
-            # Create one-hot encoding for single character
-            char_tensor = torch.nn.functional.one_hot(
-                torch.tensor([last_char_idx]), 
-                num_classes=len(char_to_idx_mapping)
-            ).float().to(device)
+            char_tensor = _get_one_hot(last_char_idx)
             
-            # Get prediction for next character
             output, state = model(char_tensor.unsqueeze(0), state=state)  # Add batch dim
             
             # Get most likely next token
             if temperature > 0:
-                # Apply temperature scaling
                 output = output / temperature
                 probabilities = torch.softmax(output, dim=-1)
                 next_token = torch.multinomial(probabilities[0, -1, :], num_samples=1).item()
             else:
-                # Default to argmax if temperature is 0
                 next_token = output[0, -1, :].argmax().item()
             
             # Decode and append
-            next_char = decode_indices_to_string([next_token], idx_to_char_mapping)
-
-            # TODO: Replace with vocab
-            if next_char == '>' or next_char == '': # EOS token
-            # if next_char == ' ' or next_char == '': # EOS token
-                break
+            next_char = vocab.decode_tokens([int(next_token)])
 
             generated += next_char
-            
-            # print(f"Step {i+1}: Added '{next_char}' -> '{generated}'")
-    
-    # TODO: TEMP: Replace with cvocab
-    print("replacing")
-    generated = generated.replace("<", "")
 
+            # break loop if eos
+            if next_char == vocab.eos.char: # EOS token
+                break
+
+    # Drop BOS/EOS. Should this really be done here?
+    generated = generated.replace(vocab.bos.char, "").replace(vocab.eos.char, "")
 
     return generated
 
+
+# ToDo: should be a decorator
 def robust_generate(generate_function, max_attempts: int, **kwargs):
-    n_chars = 100
 
     attempts = 0
     valid = False
@@ -244,3 +238,4 @@ def robust_generate(generate_function, max_attempts: int, **kwargs):
         
     print(f"Could not generate valid molecular sample in {max_attempts} attemtps. Aborting.")
     return output
+
