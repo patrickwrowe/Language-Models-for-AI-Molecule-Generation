@@ -7,8 +7,13 @@ import sys
 sys.path.append("..")
 
 from data.chembldb import ChemblDBIndications
-from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pad_sequence
+from torch.nn.utils.rnn import pad_sequence
 from vocab import character
+
+from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
+from torch.utils.data import Dataset, DataLoader, Subset
+import torch
+import attr
 
 @attr.define
 class CharSMILESChEMBLIndications(Dataset):
@@ -114,16 +119,14 @@ class CharSMILESChEMBLIndications(Dataset):
     def val_dataloader(self) -> DataLoader:
         return self.get_dataloader(train=False)
 
-    
-
-from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
-from torch.utils.data import Dataset, DataLoader, Subset
-import torch
-import attr
 
 @attr.define
 class SMILESDatasetContinuous(Dataset):
     """
+    #
+    DEPRECATED: See CharSMILESChEMBLIndications above.
+    #
+
     A PyTorch Dataset for tokenizing and encoding SMILES strings using a HuggingFace tokenizer.
     Attributes:
         smiles_list (list[str]): List of SMILES strings representing molecules.
@@ -223,6 +226,10 @@ class SMILESDatasetContinuous(Dataset):
 @attr.define
 class CharacterLevelSMILES(Dataset):
     """
+    #
+    DEPRECATED: See CharSMILESChEMBLIndications above.
+    #
+
     A PyTorch Dataset for character-level tokenization of SMILES strings.
     Attributes:
         smiles_list (list[str]): List of SMILES strings representing molecules.
