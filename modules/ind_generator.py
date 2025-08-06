@@ -59,7 +59,7 @@ class SmilesIndGeneratorRNN(SmilesGenerativeLanguageModel):
             embedding_dim=self.config.num_hiddens
         )
 
-        self.in_emb_h0 = nn.Embedding(
+        self.in_emb_c0 = nn.Embedding(
             num_embeddings=self.config.num_indications,
             embedding_dim=self.config.num_hiddens
         )
@@ -90,7 +90,7 @@ class SmilesIndGeneratorRNN(SmilesGenerativeLanguageModel):
 
         # Transform indication vector to initial hidden and cell states 
         h_0 = self.init_state_dropout(self.in_emb_h0(input_tensor))
-        c_0 = self.init_state_dropout(self.in_emb_h0(input_tensor))
+        c_0 = self.init_state_dropout(self.in_emb_c0(input_tensor))
 
         return (h_0, c_0)
 
