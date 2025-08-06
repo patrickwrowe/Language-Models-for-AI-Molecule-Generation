@@ -1,6 +1,6 @@
 import pandas as pd
 import pathlib
-import attr
+import attrs
 import sqlite3
 from typing import Optional
 
@@ -20,7 +20,29 @@ SQL_DRUG_INDICATION_QUERY = """
 # ToDo: Centralize
 END_OF_MOLECULE_TOKEN = '[EOM]'
 
-@attr.define
+@attrs.define
+class ChemblDBData:
+    query_df: Optional[pd.DataFrame] = attrs.field(init=False)
+
+    query: str = attrs.field()
+    filename: str = attrs.field()
+
+    def _load_data(self):
+        if not pathlib.Path.exists(pathlib.Path(CHEMBL_DB_PATH)):
+            raise FileNotFoundError(f"{CHEMBL_DB_PATH} was not found")
+        else:
+            con = sqlite3.connect(CHEMBL_DB_PATH)
+            pd_df = pd.read_sql_query(sql=SQL_DRUG_INDICATION_QUERY, con=con)
+            con.close()
+            return pd_df
+
+    def _preprocess(self):
+        raise NotImplementedError()
+
+    def load(self):
+        raise NotImplementedError()
+
+@attrs.define
 class ChemblDBChemreps:
     """
     A class for handling ChEMBL database chemical representations.
@@ -59,8 +81,8 @@ class ChemblDBChemreps:
         return text
 
 
-@attr.define 
-class ChemblDBIndications:
+@attrs.define 
+class ChemblDBIndications(ChemblDBData):
     """
     A class for extracting the drug indications, alongside relevant smiles
     strings from the chembldb database.
@@ -70,15 +92,6 @@ class ChemblDBIndications:
 
     query: str = SQL_DRUG_INDICATION_QUERY
     filename: str = "chembl_db_indications_preprocessed.csv"
-
-    def _load_data(self):
-        if not pathlib.Path.exists(pathlib.Path(CHEMBL_DB_PATH)):
-            raise FileNotFoundError(f"{CHEMBL_DB_PATH} was not found")
-        else:
-            con = sqlite3.connect(CHEMBL_DB_PATH)
-            pd_df = pd.read_sql_query(sql=SQL_DRUG_INDICATION_QUERY, con=con)
-            con.close()
-            return pd_df
 
     def _preprocess(self, raw_df: pd.DataFrame, max_length: int = 512, min_phase_for_ind: int = 3, save_path: Optional[str] = None):
         raw_df = raw_df[raw_df.max_phase_for_ind >= min_phase_for_ind].drop(  # Don't want to train on things which weren't efficacious
