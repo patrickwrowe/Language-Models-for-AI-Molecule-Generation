@@ -161,8 +161,7 @@ def simple_generate(
     Simple character-by-character generation function.
     """
 
-    def _get_one_hot(encoded: list[int]):
-        return torch.nn.functional.one_hot(
+    _get_one_hot = lambda encoded: torch.nn.functional.one_hot(
             torch.tensor(encoded), 
             num_classes=len(vocab)
             ).float().to(device)
