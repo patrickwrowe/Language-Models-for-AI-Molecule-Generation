@@ -43,58 +43,18 @@ ax.set_yscale("log")
 
 ## What do the molecules look like for our most common indication?
 
-
-```python
-images_per_indication = 9  # Visualise a 3x3 grid of drug molecules
-
-for indications_filter_index in range(10):
-    # indications_filter_index = 1
-    indications_filter_name = most_frequent_indications.index[indications_filter_index]
-    filtered_molecules = dataset.all_data.filter(items=["canonical_smiles", indications_filter_name])
-    filtered_molecules = filtered_molecules[filtered_molecules[indications_filter_name]].drop(columns=[indications_filter_name])
-    filtered_molecules = filtered_molecules.rename(columns={"canonical_smiles": indications_filter_name})
-
-    smiles_to_draw = [smiles for smiles in filtered_molecules[indications_filter_name][:images_per_indication]]
-
-    display(Markdown(f"## Showing {images_per_indication} example chemical structures for {indications_filter_name}"))
-    display(
-        utilities.draw_molecules_as_grid_from_smiles(
-            canonical_smiles=smiles_to_draw, 
-            names=[str(i + 1) for i in range(images_per_indication)]  # Just number them
-        )
-    )
-```
-
-## Showing 9 example chemical structures for mesh_heading_Neoplasms
+## 9 example chemical structures for mesh_heading_Neoplasms
 ### Note: Neoplasms refers to cancer
     
 ![png](readme_files/ind_rnn_generator_7_5.png)
-    
-
-## Showing 9 example chemical structures for mesh_heading_Breast Neoplasms
-### Note: Neoplasms refers to cancer    
-
-![png](readme_files/ind_rnn_generator_7_8.png)
-    
 
 ## Showing 9 example chemical structures for mesh_heading_Cardiovascular Diseases
     
 ![png](readme_files/ind_rnn_generator_7_14.png)
-    
-
-## Showing 9 example chemical structures for mesh_heading_Severe Acute Respiratory Syndrome
-
-    
-![png](readme_files/ind_rnn_generator_7_17.png)
-
-## Showing 9 example chemical structures for mesh_heading_Pain
-    
-![png](readme_files/ind_rnn_generator_7_20.png)
 
 ## Showing 9 example chemical structures for mesh_heading_Infections
 
-
-    rows=3, cols=3
+![png](readme_files/ind_rnn_generator_7_21.png)
 
 # Model training
 
