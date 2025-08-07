@@ -54,7 +54,7 @@ ax.set_yscale("log")
 
 ## Showing 9 example chemical structures for mesh_heading_Infections
 
-![png](readme_files/ind_rnn_generator_7_21.png)
+![png](readme_files/ind_rnn_generator_7_23.png)
 
 # Model training
 
