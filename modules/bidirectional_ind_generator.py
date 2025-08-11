@@ -40,7 +40,7 @@ class SmilesBidirectionalIndGeneratorRNN(SmilesGenerativeLanguageModel):
         )
 
         self.rnn_to_out = nn.Linear(
-            self.config.num_hiddens * 2, self.config.vocab_size
+            self.config.num_hiddens, self.config.vocab_size
         )
 
         self.rnn = nn.LSTM(
@@ -49,7 +49,7 @@ class SmilesBidirectionalIndGeneratorRNN(SmilesGenerativeLanguageModel):
             num_layers = self.config.num_layers,
             batch_first = True,
             dropout=self.config.rnn_dropout,
-            bidirectional=True
+            bidirectional=False
         )
         
         self.dropout = nn.Dropout(self.config.output_dropout)
@@ -87,7 +87,7 @@ class SmilesBidirectionalIndGeneratorRNN(SmilesGenerativeLanguageModel):
         # Temporarily cast back to ordinal encoding...
         input_tensor = input.argmax(dim=-1)
 
-        input_tensor = input_tensor.repeat(self.config.num_layers * 2, 1).type(torch.long)
+        input_tensor = input_tensor.repeat(self.config.num_layers, 1).type(torch.long)
 
         # Transform indication vector to initial hidden and cell states 
         h_0 = self.init_state_dropout(self.in_emb_h0(input_tensor))

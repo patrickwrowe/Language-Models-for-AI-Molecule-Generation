@@ -75,10 +75,14 @@ class ChemblDBChemreps:
             )
             return chembldb_chemreps_raw_pd
 
-    def _preprocess(self, chemrepsdb: pd.DataFrame, column: str = "canonical_smiles"):
+    def _preprocess(self, chemrepsdb: pd.DataFrame, column: str = "canonical_smiles", continuous=True):
         db_column = chemrepsdb[column].to_list()
-        text = END_OF_MOLECULE_TOKEN.join([col for col in db_column])
-        return text
+        if continuous:
+            text = END_OF_MOLECULE_TOKEN.join([row for row in db_column])
+            return text
+        else: 
+            return db_column
+
 
 
 @attrs.define 
@@ -93,7 +97,7 @@ class ChemblDBIndications(ChemblDBData):
     query: str = SQL_DRUG_INDICATION_QUERY
     filename: str = "chembl_db_indications_preprocessed.csv"
 
-    def _preprocess(self, raw_df: pd.DataFrame, max_length: int = 512, min_phase_for_ind: int = 3, save_path: Optional[str] = None):
+    def _preprocess(self, raw_df: pd.DataFrame, max_length: int = 1024, min_phase_for_ind: int = 3, save_path: Optional[str] = None):
         raw_df = raw_df[raw_df.max_phase_for_ind >= min_phase_for_ind].drop(  # Don't want to train on things which weren't efficacious
                             columns=[
                             'molregno', 

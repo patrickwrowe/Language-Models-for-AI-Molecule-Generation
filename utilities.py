@@ -238,3 +238,34 @@ def robust_generate(generate_function, max_attempts: int, **kwargs):
     print(f"Could not generate valid molecular sample in {max_attempts} attemtps. Aborting.")
     return output
 
+def generate_samples(rows, cols,  dataset, model, prompt, indication_name, max_attempts, max_generate, temperature):
+    rows, cols = 5, 5
+
+    n_valid = 0
+    n_invalid = 0
+    outputs = []
+
+    mesh_indices = [dataset.indications_names.index(indication_name)] * (rows * cols)
+
+    for idx in mesh_indices:
+
+        output = robust_generate(
+            simple_generate,
+            max_attempts=max_attempts,
+            prefix=prompt,
+            model=model,
+            vocab=dataset.vocab,
+            init_state_tensor = dataset.get_indications_tensor(dataset.indications_names[idx]).unsqueeze(0).to("cuda"),
+            max_generate=max_generate,
+            temperature=temperature,
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        )
+
+        if output:
+            outputs.append(output)
+            n_valid += 1
+        if not output:
+            n_invalid += 1
+            outputs.append(None)
+
+    return outputs
