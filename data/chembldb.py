@@ -4,7 +4,7 @@ import attrs
 import sqlite3
 from typing import Optional
 
-CHEMBL_DB_PATH = "../raw-data/chembldb/chembl_35/chembl_35_sqlite/chembl_35.db"
+CHEMBL_DB_PATH = "../../data/chembl/chembl_35/chembl_35_sqlite/chembl_35.db"
 
 SQL_DRUG_INDICATION_QUERY = """
     SELECT comp.molregno, comp.canonical_smiles, mol.indication_class, rec.record_id, ind.mesh_heading, ind.max_phase_for_ind
@@ -25,7 +25,6 @@ class ChemblDBData:
     query_df: Optional[pd.DataFrame] = attrs.field(init=False)
 
     query: str = attrs.field()
-    filename: str = attrs.field()
 
     def _load_data(self):
         if not pathlib.Path.exists(pathlib.Path(CHEMBL_DB_PATH)):
@@ -36,10 +35,10 @@ class ChemblDBData:
             con.close()
             return pd_df
 
-    def _preprocess(self):
+    def _preprocess(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def load(self):
+    def load(self, *args, **kwargs):
         raise NotImplementedError()
 
 @attrs.define
@@ -95,7 +94,6 @@ class ChemblDBIndications(ChemblDBData):
     query_df: Optional[pd.DataFrame] = None
 
     query: str = SQL_DRUG_INDICATION_QUERY
-    filename: str = "chembl_db_indications_preprocessed.csv"
 
     def _preprocess(self, raw_df: pd.DataFrame, max_length: int = 1024, min_phase_for_ind: int = 3, save_path: Optional[str] = None):
         raw_df = raw_df[raw_df.max_phase_for_ind >= min_phase_for_ind].drop(  # Don't want to train on things which weren't efficacious
@@ -125,7 +123,7 @@ class ChemblDBIndications(ChemblDBData):
 
         if save_path:
             # Save the file
-            preprocessed_df.to_csv(self.filename)
+            preprocessed_df.to_csv(save_path, index=False)
 
         return preprocessed_df
 
