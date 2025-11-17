@@ -21,8 +21,8 @@ SQL_ALL_MOL_QUERY = """
     SELECT canonical_smiles FROM compound_structures
 """
 
-# ToDo: Centralize
-END_OF_MOLECULE_TOKEN = '[EOM]'
+def set_chembldb_path(path: str):
+    CHEMBL_DB_PATH = path
 
 @attrs.define
 class ChemblDBData:
