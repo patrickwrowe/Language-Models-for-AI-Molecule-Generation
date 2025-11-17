@@ -69,6 +69,7 @@ class ChemblDBChemreps(ChemblDBData):
     def _preprocess(self, chemrepsdb: pd.DataFrame, column: str = "canonical_smiles", max_length: int = 256, save_path: Optional[str] = None):
         
         preprocessed = chemrepsdb[chemrepsdb[column].str.len().lt(max_length)]
+        preprocessed = preprocessed.drop_duplicates()
 
         if save_path:
             # Save the file
@@ -77,13 +78,13 @@ class ChemblDBChemreps(ChemblDBData):
         return preprocessed
 
     @classmethod
-    def load(cls, load_path: Optional[str] = None):
-        if load_path and pathlib.Path.exists(pathlib.Path(load_path)):
+    def load(cls, preprocessed_filename: Optional[str] = None, save_if_missing: bool = True):
+        if preprocessed_filename and pathlib.Path.exists(pathlib.Path(preprocessed_filename)):
             print(f"loading {cls.__name__} dataset from file")
-            return pd.read_csv(load_path)
+            return pd.read_csv(preprocessed_filename)
         else:
             print("Preprocessed data not found... attemping to load and preprocess")
-            return cls()._preprocess(cls()._load_data())
+            return cls()._preprocess(cls()._load_data(), save_path=preprocessed_filename if save_if_missing else None)
 
 
 @attrs.define 
@@ -105,9 +106,6 @@ class ChemblDBIndications(ChemblDBData):
                         ]  # Don't need identifiers etc
                     )
         
-
-        print("Preprocessing")
-
         # Drop smiles with string lenth longer than max_length
         raw_df = raw_df[raw_df[column].str.split().str.len().lt(max_length)]
 
@@ -128,10 +126,10 @@ class ChemblDBIndications(ChemblDBData):
         return preprocessed_df
 
     @classmethod
-    def load(cls, load_path: Optional[str] = None):
-        if load_path and pathlib.Path.exists(pathlib.Path(load_path)):
+    def load(cls, preprocessed_filename: Optional[str] = None, save_if_missing: bool = True):
+        if preprocessed_filename and pathlib.Path.exists(pathlib.Path(preprocessed_filename)):
             print(f"loading {cls.__name__} dataset from file")
-            return pd.read_csv(load_path)
+            return pd.read_csv(preprocessed_filename)
         else:
             print("Preprocessed data not found... attemping to load and preprocess")
-            return cls()._preprocess(cls()._load_data())
+            return cls()._preprocess(cls()._load_data(), save_path=preprocessed_filename if save_if_missing else None)
