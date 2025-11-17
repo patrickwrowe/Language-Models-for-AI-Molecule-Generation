@@ -61,7 +61,7 @@ class ChemblDBChemreps:
             joining its entries with END_OF_MOLECULE_TOKEN, and returning the resulting text.
     """
 
-    chemreps_filepath: pathlib.Path = pathlib.Path("../raw-data/chembldb/chembl_35_chemreps.txt.gz")
+    chemreps_filepath: pathlib.Path = pathlib.Path(CHEMBL_DB_PATH)
 
     def _load_or_download(self, **kwargs):
         """TBD: Download file from source instead of needing to pre-download"""
