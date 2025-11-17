@@ -17,6 +17,10 @@ SQL_DRUG_INDICATION_QUERY = """
     ON rec.record_id = ind.record_id
 """
 
+SQL_ALL_MOL_QUERY = """
+    SELECT canonical_smiles FROM compound_structures
+"""
+
 # ToDo: Centralize
 END_OF_MOLECULE_TOKEN = '[EOM]'
 
@@ -31,7 +35,7 @@ class ChemblDBData:
             raise FileNotFoundError(f"{CHEMBL_DB_PATH} was not found")
         else:
             con = sqlite3.connect(CHEMBL_DB_PATH)
-            pd_df = pd.read_sql_query(sql=SQL_DRUG_INDICATION_QUERY, con=con)
+            pd_df = pd.read_sql_query(sql=self.query, con=con)
             con.close()
             return pd_df
 
@@ -42,7 +46,7 @@ class ChemblDBData:
         raise NotImplementedError()
 
 @attrs.define
-class ChemblDBChemreps:
+class ChemblDBChemreps(ChemblDBData):
     """
     A class for handling ChEMBL database chemical representations.
 
@@ -60,28 +64,26 @@ class ChemblDBChemreps:
             joining its entries with END_OF_MOLECULE_TOKEN, and returning the resulting text.
     """
 
-    chemreps_filepath: pathlib.Path = pathlib.Path(CHEMBL_DB_PATH)
+    query: str = SQL_ALL_MOL_QUERY
 
-    def _load_or_download(self, **kwargs):
-        """TBD: Download file from source instead of needing to pre-download"""
-        if not pathlib.Path.exists(self.chemreps_filepath):
-            raise FileNotFoundError(f"{self.chemreps_filepath} was not found. Please download from https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/latest/")
+    def _preprocess(self, chemrepsdb: pd.DataFrame, column: str = "canonical_smiles", max_length: int = 256, save_path: Optional[str] = None):
+        
+        preprocessed = chemrepsdb[chemrepsdb[column].str.len().lt(max_length)]
+
+        if save_path:
+            # Save the file
+            preprocessed.to_csv(save_path, index=False)
+        
+        return preprocessed
+
+    @classmethod
+    def load(cls, load_path: Optional[str] = None):
+        if load_path and pathlib.Path.exists(pathlib.Path(load_path)):
+            print(f"loading {cls.__name__} dataset from file")
+            return pd.read_csv(load_path)
         else:
-            chembldb_chemreps_raw_pd = pd.read_table(
-                pathlib.Path(self.chemreps_filepath), 
-                compression="gzip",
-                **kwargs,
-            )
-            return chembldb_chemreps_raw_pd
-
-    def _preprocess(self, chemrepsdb: pd.DataFrame, column: str = "canonical_smiles", continuous=True):
-        db_column = chemrepsdb[column].to_list()
-        if continuous:
-            text = END_OF_MOLECULE_TOKEN.join([row for row in db_column])
-            return text
-        else: 
-            return db_column
-
+            print("Preprocessed data not found... attemping to load and preprocess")
+            return cls()._preprocess(cls()._load_data())
 
 
 @attrs.define 
@@ -91,11 +93,9 @@ class ChemblDBIndications(ChemblDBData):
     strings from the chembldb database.
     """
 
-    query_df: Optional[pd.DataFrame] = None
-
     query: str = SQL_DRUG_INDICATION_QUERY
 
-    def _preprocess(self, raw_df: pd.DataFrame, max_length: int = 1024, min_phase_for_ind: int = 3, save_path: Optional[str] = None):
+    def _preprocess(self, raw_df: pd.DataFrame, max_length: int = 1024, min_phase_for_ind: int = 3, column: str = "canonical_smiles", save_path: Optional[str] = None):
         raw_df = raw_df[raw_df.max_phase_for_ind >= min_phase_for_ind].drop(  # Don't want to train on things which weren't efficacious
                             columns=[
                             'molregno', 
@@ -109,7 +109,7 @@ class ChemblDBIndications(ChemblDBData):
         print("Preprocessing")
 
         # Drop smiles with string lenth longer than max_length
-        raw_df = raw_df[raw_df["canonical_smiles"].str.split().str.len().lt(max_length)]
+        raw_df = raw_df[raw_df[column].str.split().str.len().lt(max_length)]
 
         preprocessed_df = pd.get_dummies(raw_df, columns=['mesh_heading']) # One-hot like for disease indications
 
@@ -130,10 +130,8 @@ class ChemblDBIndications(ChemblDBData):
     @classmethod
     def load(cls, load_path: Optional[str] = None):
         if load_path and pathlib.Path.exists(pathlib.Path(load_path)):
-            print("loading from file")
-            return cls(query_df=pd.read_csv(load_path))
+            print(f"loading {cls.__name__} dataset from file")
+            return pd.read_csv(load_path)
         else:
             print("Preprocessed data not found... attemping to load and preprocess")
-            return cls(
-                query_df = cls()._preprocess(cls()._load_data())
-            )
+            return cls()._preprocess(cls()._load_data())

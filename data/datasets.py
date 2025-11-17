@@ -6,7 +6,6 @@ import pandas as pd
 import sys
 sys.path.append("..")
 
-from data.chembldb import ChemblDBIndications, ChemblDBChemreps
 from torch.nn.utils.rnn import pad_sequence
 from vocab import character
 
@@ -14,6 +13,8 @@ from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 from torch.utils.data import Dataset, DataLoader, Subset
 import torch
 import attr
+
+from cheminformatics.molecular_descriptors import molecular_weight_from_smiles_list
 
 @attr.define
 class ChEMBLIndicationsExtended(Dataset):
@@ -44,6 +45,9 @@ class ChEMBLIndicationsExtended(Dataset):
         )
 
         self.all_data = pd.concat([self.drug_data, self.chemreps_df]).fillna(0)
+
+        # Property Calculations
+        self.all_data["Mw"] = molecular_weight_from_smiles_list(self.all_data[self.smiles_column_title].tolist())
         
         self.all_smiles: list[str] = self.all_data[self.smiles_column_title].tolist()
         self.characters: list[str] = sorted(list(set(''.join(self.all_smiles))))
