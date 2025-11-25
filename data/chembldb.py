@@ -4,7 +4,7 @@ import attrs
 import sqlite3
 from typing import Optional
 
-from cheminformatics.molecular_descriptors import molecular_weight_from_smiles_list
+from cheminformatics.molecular_descriptors import molecular_features_from_smiles_list
 
 CHEMBL_DB_PATH = "../../data/chembl/chembl_35/chembl_35_sqlite/chembl_35.db"
 
@@ -58,7 +58,13 @@ class ChemblDBChemreps(ChemblDBData):
         preprocessed = preprocessed.drop_duplicates()
 
          # Property Calculations
-        preprocessed["Mw"] = molecular_weight_from_smiles_list(preprocessed[column].tolist())
+        # molecular_features = pd.DataFrame(molecular_features_from_smiles_list(preprocessed[column].tolist(), smiles_column=column))
+        molecular_features = molecular_features_from_smiles_list(preprocessed[column].tolist(), smiles_column=column)
+        return molecular_features
+        preprocessed = pd.merge(preprocessed, molecular_features, on=column)
+
+        # Some molecules can't be loaded by chembl, so no properties, drop these.
+        preprocessed.dropna()
 
         if save_path:
             # Save the file
