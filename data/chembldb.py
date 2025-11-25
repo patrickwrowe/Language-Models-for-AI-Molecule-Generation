@@ -4,6 +4,8 @@ import attrs
 import sqlite3
 from typing import Optional
 
+from cheminformatics.molecular_descriptors import molecular_weight_from_smiles_list
+
 CHEMBL_DB_PATH = "../../data/chembl/chembl_35/chembl_35_sqlite/chembl_35.db"
 
 SQL_DRUG_INDICATION_QUERY = """
@@ -20,9 +22,6 @@ SQL_DRUG_INDICATION_QUERY = """
 SQL_ALL_MOL_QUERY = """
     SELECT canonical_smiles FROM compound_structures
 """
-
-def set_chembldb_path(path: str):
-    CHEMBL_DB_PATH = path
 
 @attrs.define
 class ChemblDBData:
@@ -48,20 +47,7 @@ class ChemblDBData:
 @attrs.define
 class ChemblDBChemreps(ChemblDBData):
     """
-    A class for handling ChEMBL database chemical representations.
-
-    Attributes:
-        chemreps_filepath (pathlib.Path): Path to the ChEMBL chemical representations file.
-
-    Methods:
-        _load_or_download(**kwargs):
-            Loads the chemical representations file into a pandas DataFrame.
-            Raises FileNotFoundError if the file does not exist.
-            Note: Download functionality is to be implemented.
-
-        _preprocess(chemrepsdb: pd.DataFrame, column: str = "canonical_smiles"):
-            Preprocesses the chemical representations DataFrame by extracting the specified column,
-            joining its entries with END_OF_MOLECULE_TOKEN, and returning the resulting text.
+    A class for loading ChEMBL database chemical representations from the sql database.
     """
 
     query: str = SQL_ALL_MOL_QUERY
@@ -70,6 +56,9 @@ class ChemblDBChemreps(ChemblDBData):
         
         preprocessed = chemrepsdb[chemrepsdb[column].str.len().lt(max_length)]
         preprocessed = preprocessed.drop_duplicates()
+
+         # Property Calculations
+        preprocessed["Mw"] = molecular_weight_from_smiles_list(preprocessed[column].tolist())
 
         if save_path:
             # Save the file

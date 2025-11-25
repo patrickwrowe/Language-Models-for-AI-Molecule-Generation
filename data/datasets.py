@@ -26,7 +26,7 @@ class ChEMBLIndicationsExtended(Dataset):
     drug_data: pd.DataFrame
 
     #  ChemblDBChemreps()._preprocess(ChemblDBChemreps()._load_or_download(), continuous=False)[::10]
-    chemreps_data: list[str]
+    chemreps_data: pd.DataFrame
 
     # Length and batch size for loading
     max_length: int = 512
@@ -39,7 +39,7 @@ class ChEMBLIndicationsExtended(Dataset):
     def __attrs_post_init__(self):        
         self.chemreps_df = pd.DataFrame(
             data={
-                self.smiles_column_title: self.chemreps_data,
+                self.smiles_column_title: self.chemreps_data[self.smiles_column_title].to_list(),
                 "mesh_heading_Other": [True] * len(self.chemreps_data)
             }
         )
